@@ -205,7 +205,7 @@ export function TeamAnalyticsView({ episodes, teamMembers, onEpisodeClick }: Tea
   const deptMax = Math.max(1, historical.writerCompleted, historical.editorCompleted);
 
   return (
-    <div className="p-4 sm:p-6 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 3.5rem)' }}>
+    <div className="py-4 sm:py-6 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 3.5rem)' }}>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
         <div>
           <h2 className="text-base font-semibold tf-text">Team Analytics</h2>

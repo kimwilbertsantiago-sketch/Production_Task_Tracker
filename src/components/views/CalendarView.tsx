@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Episode, Booking, Client, TeamMember, STATUS_MAP } from '@/lib/types';
 import { ChevronLeft, ChevronRight, Clock, Calendar as CalIcon } from 'lucide-react';
-import { Badge } from '@/components/ui/Avatar';
 
 interface CalendarViewProps {
   episodes: Episode[];
@@ -70,13 +69,11 @@ export function CalendarView({ episodes, bookings, clients, onEpisodeClick }: Ca
   const fmtKey = (d: Date) => d.toISOString().slice(0, 10);
 
   return (
-    <div className="p-4 sm:p-6 h-full flex flex-col">
+    <div className="py-4 sm:py-6 h-full flex flex-col">
       {/* Toolbar */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <h2 className="text-base font-semibold tf-text">{monthLabel}</h2>
-          <Badge color="#3B82F6">Tasks</Badge>
-          <Badge color="#F59E0B">Bookings</Badge>
         </div>
         <div className="flex items-center gap-1">
           <button onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))} className="tf-btn tf-btn-ghost p-2">

@@ -139,7 +139,7 @@ export function TableView({ episodes, clients, teamMembers, canEdit, onUpdate, o
   const editorOpts = editorOptions.map((m) => ({ value: m.id, label: m.name }));
 
   return (
-    <div className="p-4 sm:p-6">
+    <div className="py-4 sm:py-6">
       {/* Search & Filter Toolbar */}
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[200px]">

@@ -47,7 +47,7 @@ export function KanbanBoard({ episodes, clients, teamMembers, canEdit, onStatusC
   };
 
   return (
-    <div className="flex gap-4 overflow-x-auto p-4 sm:p-6 h-full" style={{ minHeight: 'calc(100vh - 3.5rem)' }}>
+    <div className="flex gap-4 overflow-x-auto py-4 sm:py-6 h-full" style={{ minHeight: 'calc(100vh - 3.5rem)' }}>
       {WORKFLOW_STATUSES.map((status, idx) => {
         const colEpisodes = episodes
           .filter((e) => e.status === status.key)

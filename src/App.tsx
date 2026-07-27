@@ -228,53 +228,55 @@ function Workspace() {
         </div>
       )}
       <main className="flex-1 overflow-hidden">
-        {view === 'kanban' && (
-          <KanbanBoard
-            episodes={pipelineEpisodes}
-            clients={clients}
-            teamMembers={teamMembers}
-            canEdit={canEdit}
-            onStatusChange={handleStatusChange}
-            onEpisodeClick={setDrawerEpisode}
-            onEditEpisode={openEditTask}
-          />
-        )}
-        {view === 'table' && (
-          <TableView
-            episodes={pipelineEpisodes}
-            clients={clients}
-            teamMembers={teamMembers}
-            canEdit={canEdit}
-            onUpdate={handleUpdate}
-            onEpisodeClick={setDrawerEpisode}
-            onEditEpisode={openEditTask}
-          />
-        )}
-        {view === 'calendar' && (
-          <CalendarView
-            episodes={pipelineEpisodes}
-            bookings={bookings}
-            clients={clients}
-            teamMembers={teamMembers}
-            onEpisodeClick={openDetails}
-          />
-        )}
-        {view === 'brands' && (
-          <BrandHubView
-            clients={clients}
-            episodes={episodes}
-            canEdit={canEdit}
-            onAddBrand={openAddBrand}
-            onEditBrand={openEditBrand}
-          />
-        )}
-        {view === 'analytics' && isOpsManager && (
-          <TeamAnalyticsView
-            episodes={episodes}
-            teamMembers={teamMembers}
-            onEpisodeClick={setDrawerEpisode}
-          />
-        )}
+        <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 h-full">
+          {view === 'kanban' && (
+            <KanbanBoard
+              episodes={pipelineEpisodes}
+              clients={clients}
+              teamMembers={teamMembers}
+              canEdit={canEdit}
+              onStatusChange={handleStatusChange}
+              onEpisodeClick={setDrawerEpisode}
+              onEditEpisode={openEditTask}
+            />
+          )}
+          {view === 'table' && (
+            <TableView
+              episodes={pipelineEpisodes}
+              clients={clients}
+              teamMembers={teamMembers}
+              canEdit={canEdit}
+              onUpdate={handleUpdate}
+              onEpisodeClick={setDrawerEpisode}
+              onEditEpisode={openEditTask}
+            />
+          )}
+          {view === 'calendar' && (
+            <CalendarView
+              episodes={pipelineEpisodes}
+              bookings={bookings}
+              clients={clients}
+              teamMembers={teamMembers}
+              onEpisodeClick={openDetails}
+            />
+          )}
+          {view === 'brands' && (
+            <BrandHubView
+              clients={clients}
+              episodes={episodes}
+              canEdit={canEdit}
+              onAddBrand={openAddBrand}
+              onEditBrand={openEditBrand}
+            />
+          )}
+          {view === 'analytics' && isOpsManager && (
+            <TeamAnalyticsView
+              episodes={episodes}
+              teamMembers={teamMembers}
+              onEpisodeClick={setDrawerEpisode}
+            />
+          )}
+        </div>
       </main>
 
       {/* Episode drawer */}
