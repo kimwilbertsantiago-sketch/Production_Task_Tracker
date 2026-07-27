@@ -26,7 +26,7 @@ const emptyForm = {
   header_font: '',
   subtitle_font: '',
   body_font: '',
-  nas_path: '',
+  nas_paths: [] as string[],
   notes: '',
 };
 
@@ -45,7 +45,7 @@ export function BrandModal({ open, onClose, client, workspaceId, onCreate, onUpd
         header_font: client.header_font ?? '',
         subtitle_font: client.subtitle_font ?? '',
         body_font: client.body_font ?? '',
-        nas_path: client.nas_path ?? '',
+        nas_paths: client.nas_paths ?? [],
         notes: client.notes ?? '',
       });
     } else {
@@ -54,7 +54,7 @@ export function BrandModal({ open, onClose, client, workspaceId, onCreate, onUpd
     setError(null);
   }, [client, open]);
 
-  const set = (k: keyof typeof form, v: string | BrandColor[]) => setForm((f) => ({ ...f, [k]: v }));
+  const set = (k: keyof typeof form, v: string | BrandColor[] | string[]) => setForm((f) => ({ ...f, [k]: v }));
 
   const updateColor = (i: number, field: keyof BrandColor, value: string) => {
     setForm((f) => {
@@ -72,6 +72,10 @@ export function BrandModal({ open, onClose, client, workspaceId, onCreate, onUpd
     setForm((f) => ({ ...f, colors: f.colors.filter((_, idx) => idx !== i) }));
   };
 
+  const addNasPath = () => setForm((f) => ({ ...f, nas_paths: [...f.nas_paths, ''] }));
+  const updateNasPath = (i: number, value: string) => setForm((f) => ({ ...f, nas_paths: f.nas_paths.map((p, idx) => idx === i ? value : p) }));
+  const removeNasPath = (i: number) => setForm((f) => ({ ...f, nas_paths: f.nas_paths.filter((_, idx) => idx !== i) }));
+
   const handleSave = async () => {
     if (!form.name.trim()) {
       setError('Client name is required');
@@ -88,7 +92,7 @@ export function BrandModal({ open, onClose, client, workspaceId, onCreate, onUpd
         header_font: form.header_font || null,
         subtitle_font: form.subtitle_font || null,
         body_font: form.body_font || null,
-        nas_path: form.nas_path || null,
+        nas_paths: form.nas_paths.filter((p) => p.trim()),
         notes: form.notes || null,
         primary_hex: primaryHex,
       };
@@ -197,12 +201,31 @@ export function BrandModal({ open, onClose, client, workspaceId, onCreate, onUpd
           </div>
         </div>
 
-        {/* NAS path */}
+        {/* NAS paths */}
         <div className="border-t tf-border pt-4">
-          <h3 className="text-xs font-semibold tf-muted uppercase tracking-wide mb-3">Asset Storage</h3>
-          <div>
-            <label className="block text-xs font-medium tf-muted mb-1">NAS Path</label>
-            <input value={form.nas_path} onChange={(e) => set('nas_path', e.target.value)} placeholder="/NAS/PodcastStudio/Client/BrandAssets" className="tf-input w-full font-mono text-xs" />
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-xs font-semibold tf-muted uppercase tracking-wide">Asset Storage</h3>
+            <button onClick={addNasPath} className="tf-btn tf-btn-ghost text-xs py-1">
+              <Plus className="h-3.5 w-3.5" /> Add NAS Path
+            </button>
+          </div>
+          <div className="space-y-2">
+            {form.nas_paths.length === 0 && (
+              <p className="text-[11px] tf-muted italic">No NAS paths added yet. Click "Add NAS Path" to add one.</p>
+            )}
+            {form.nas_paths.map((path, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <input
+                  value={path}
+                  onChange={(e) => updateNasPath(i, e.target.value)}
+                  placeholder="/NAS/PodcastStudio/Client/BrandAssets"
+                  className="tf-input w-full font-mono text-xs"
+                />
+                <button onClick={() => removeNasPath(i)} className="tf-btn tf-btn-ghost p-2 text-red-500 shrink-0">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
           </div>
         </div>
 

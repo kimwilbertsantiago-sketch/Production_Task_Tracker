@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Episode, Client, Booking, ListRow, EpisodeStatus, TeamMember, Comment, Notification, NotificationType, isDemoEmail } from '@/lib/types';
+import { Episode, Client, Booking, ListRow, EpisodeStatus, TeamMember, Comment, Notification, NotificationType, CustomOption, isDemoEmail } from '@/lib/types';
 import { FALLBACK_DATA } from '@/lib/fallbackData';
 
 interface WorkspaceData {
@@ -24,6 +24,11 @@ interface WorkspaceData {
   createClient: (payload: Partial<Client>) => Promise<Client | null>;
   updateClient: (id: string, patch: Partial<Client>) => Promise<void>;
   deleteClient: (id: string) => Promise<void>;
+  customOptions: CustomOption[];
+  createCustomOption: (category: CustomOption['category'], label: string) => Promise<void>;
+  deleteCustomOption: (id: string) => Promise<void>;
+  purgeAllTasksAndClients: () => Promise<void>;
+  resetEverything: () => Promise<void>;
   addComment: (episodeId: string, authorId: string | null, body: string) => Promise<Comment | null>;
   markNotificationRead: (id: string) => Promise<void>;
   markAllNotificationsRead: () => Promise<void>;
@@ -38,6 +43,7 @@ export function useWorkspaceData(currentUserId?: string, isDemoUser?: boolean): 
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [customOptions, setCustomOptions] = useState<CustomOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [usingFallback, setUsingFallback] = useState(false);
@@ -46,16 +52,17 @@ export function useWorkspaceData(currentUserId?: string, isDemoUser?: boolean): 
     setLoading(true);
     setError(null);
     try {
-      const [listsRes, clientsRes, episodesRes, bookingsRes, membersRes, commentsRes] = await Promise.all([
+      const [listsRes, clientsRes, episodesRes, bookingsRes, membersRes, commentsRes, optionsRes] = await Promise.all([
         supabase.from('lists').select('*').order('sort_order'),
         supabase.from('clients').select('*').order('name'),
         supabase.from('episodes').select('*, client:clients(*), writer_assignee:team_members!episodes_writer_assignee_id_fkey(*), editor_assignee:team_members!episodes_editor_assignee_id_fkey(*)').order('sort_order'),
         supabase.from('bookings').select('*, client:clients(*)').order('booking_date'),
         supabase.from('team_members').select('*').order('name'),
         supabase.from('comments').select('*, author:team_members(*)').order('created_at', { ascending: false }),
+        supabase.from('custom_options').select('*').order('category, label'),
       ]);
 
-      const firstError = listsRes.error || clientsRes.error || episodesRes.error || bookingsRes.error || membersRes.error || commentsRes.error;
+      const firstError = listsRes.error || clientsRes.error || episodesRes.error || bookingsRes.error || membersRes.error || commentsRes.error || optionsRes.error;
       if (firstError) throw firstError;
 
       const allMembers = (membersRes.data as TeamMember[]) ?? [];
@@ -70,6 +77,7 @@ export function useWorkspaceData(currentUserId?: string, isDemoUser?: boolean): 
       setBookings((bookingsRes.data as Booking[]) ?? []);
       setTeamMembers(visibleMembers);
       setComments((commentsRes.data as Comment[]) ?? []);
+      setCustomOptions((optionsRes.data as CustomOption[]) ?? []);
       setUsingFallback(false);
     } catch (err) {
       console.warn('[useWorkspaceData] Database fetch failed:', err);
@@ -82,6 +90,7 @@ export function useWorkspaceData(currentUserId?: string, isDemoUser?: boolean): 
         setTeamMembers(FALLBACK_DATA.teamMembers);
         setComments([]);
         setNotifications([]);
+        setCustomOptions([]);
         setUsingFallback(true);
       } else {
         setLists([]);
@@ -91,6 +100,7 @@ export function useWorkspaceData(currentUserId?: string, isDemoUser?: boolean): 
         setTeamMembers([]);
         setComments([]);
         setNotifications([]);
+        setCustomOptions([]);
         setUsingFallback(false);
       }
       setError(null);
@@ -182,6 +192,8 @@ export function useWorkspaceData(currentUserId?: string, isDemoUser?: boolean): 
         descript_project_link: payload.descript_project_link ?? null,
         frame_io_review_link: payload.frame_io_review_link ?? null,
         writer_notes_doc: payload.writer_notes_doc ?? null,
+        deliverable_type: payload.deliverable_type ?? null,
+        deliverable_subtype: payload.deliverable_subtype ?? null,
         shorts_target: 5,
         booking_date: null,
         start_date: payload.start_date ?? null,
@@ -229,15 +241,14 @@ export function useWorkspaceData(currentUserId?: string, isDemoUser?: boolean): 
         name: payload.name ?? 'Untitled',
         primary_hex: payload.primary_hex ?? '#64748B',
         font_requirements: null,
-        lower_third_template: payload.template_path ?? null,
+        lower_third_template: null,
         logo_url: payload.logo_url ?? null,
         notes: payload.notes ?? null,
         colors: payload.colors ?? [],
         header_font: payload.header_font ?? null,
         subtitle_font: payload.subtitle_font ?? null,
         body_font: payload.body_font ?? null,
-        asset_drive_path: payload.asset_drive_path ?? null,
-        template_path: payload.template_path ?? null,
+        nas_paths: payload.nas_paths ?? [],
         created_at: new Date().toISOString(),
       };
       setClients((prev) => [...prev, newClient]);
@@ -275,6 +286,80 @@ export function useWorkspaceData(currentUserId?: string, isDemoUser?: boolean): 
       console.warn('[useWorkspaceData] deleteClient failed:', err);
     }
   }, [usingFallback]);
+
+  const createCustomOption = useCallback(async (category: CustomOption['category'], label: string) => {
+    const trimmed = label.trim();
+    if (!trimmed) return;
+    const wsId = lists[0]?.workspace_id ?? null;
+    const temp: CustomOption = {
+      id: `fb-opt-${Date.now()}`,
+      workspace_id: wsId,
+      category,
+      label: trimmed,
+      created_at: new Date().toISOString(),
+    };
+    setCustomOptions((prev) => [...prev, temp].sort((a, b) => a.category.localeCompare(b.category) || a.label.localeCompare(b.label)));
+    if (usingFallback) return;
+    try {
+      const { error } = await supabase.from('custom_options').insert({ workspace_id: wsId, category, label: trimmed });
+      if (error) throw error;
+      await fetchAll();
+    } catch (err) {
+      console.warn('[useWorkspaceData] createCustomOption failed:', err);
+    }
+  }, [usingFallback, lists, fetchAll]);
+
+  const deleteCustomOption = useCallback(async (id: string) => {
+    setCustomOptions((prev) => prev.filter((o) => o.id !== id));
+    if (usingFallback) return;
+    try {
+      const { error } = await supabase.from('custom_options').delete().eq('id', id);
+      if (error) throw error;
+    } catch (err) {
+      console.warn('[useWorkspaceData] deleteCustomOption failed:', err);
+    }
+  }, [usingFallback]);
+
+  const purgeAllTasksAndClients = useCallback(async () => {
+    setEpisodes([]);
+    setClients([]);
+    setBookings([]);
+    setComments([]);
+    if (usingFallback) return;
+    try {
+      await supabase.from('comments').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.from('episodes').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.from('bookings').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.from('clients').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    } catch (err) {
+      console.warn('[useWorkspaceData] purgeAllTasksAndClients failed:', err);
+      throw err;
+    }
+  }, [usingFallback]);
+
+  const resetEverything = useCallback(async () => {
+    setEpisodes([]);
+    setClients([]);
+    setBookings([]);
+    setComments([]);
+    setCustomOptions([]);
+    setTeamMembers((prev) => prev.filter((m) => m.user_id === currentUserId));
+    if (usingFallback) return;
+    try {
+      await supabase.from('comments').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.from('episodes').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.from('bookings').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.from('clients').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.from('custom_options').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      // Delete non-admin team_members (keep the current user's)
+      if (currentUserId) {
+        await supabase.from('team_members').delete().neq('user_id', currentUserId);
+      }
+    } catch (err) {
+      console.warn('[useWorkspaceData] resetEverything failed:', err);
+      throw err;
+    }
+  }, [usingFallback, currentUserId]);
 
   const addComment = useCallback(async (episodeId: string, authorId: string | null, body: string): Promise<Comment | null> => {
     if (usingFallback) {
@@ -365,6 +450,11 @@ export function useWorkspaceData(currentUserId?: string, isDemoUser?: boolean): 
     createClient,
     updateClient,
     deleteClient,
+    customOptions,
+    createCustomOption,
+    deleteCustomOption,
+    purgeAllTasksAndClients,
+    resetEverything,
     addComment,
     markNotificationRead,
     markAllNotificationsRead,

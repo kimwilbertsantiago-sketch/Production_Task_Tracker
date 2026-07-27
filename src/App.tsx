@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { ThemeProvider } from '@/context/ThemeContext';
+import { ToastProvider, useToast } from '@/context/ToastContext';
 import { AuthProvider, useAuth, canManageTasks, canDeleteTasks } from '@/context/AuthContext';
 import { AuthScreen } from '@/components/AuthScreen';
 import { Header, ViewKey } from '@/components/Header';
@@ -16,11 +17,12 @@ import { EditProfileModal } from '@/components/EditProfileModal';
 import { StudioSettingsModal } from '@/components/StudioSettingsModal';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { useWorkspaceData } from '@/hooks/useWorkspaceData';
-import { Episode, Client, EpisodeStatus, TeamMember, NotificationType, Notification } from '@/lib/types';
+import { Episode, Client, EpisodeStatus, TeamMember, NotificationType, Notification, DEFAULT_DELIVERABLE_TYPES, DEFAULT_BRANDING_SUBTYPES, CustomOption, WORKFLOW_STATUSES } from '@/lib/types';
 import { Loader2, AlertCircle } from 'lucide-react';
 
 function Workspace() {
   const { profile, user, isDemoUser } = useAuth();
+  const { showToast } = useToast();
   const canEdit = true;
   const canDelete = canDeleteTasks(profile?.role);
   const isOpsManager = profile?.role === 'Operations Manager';
@@ -40,8 +42,17 @@ function Workspace() {
     loading, error, usingFallback,
     updateEpisode, updateEpisodeStatus, createEpisode, deleteEpisode,
     createClient, updateClient, deleteClient,
+    customOptions, createCustomOption, deleteCustomOption,
+    purgeAllTasksAndClients, resetEverything,
     addComment, markNotificationRead, markAllNotificationsRead, createNotification,
   } = useWorkspaceData(currentUserId, isDemoUser);
+
+  const deliverableTypes = useMemo(() => {
+    return [...DEFAULT_DELIVERABLE_TYPES, ...customOptions.filter((o) => o.category === 'deliverable_type').map((o) => o.label)];
+  }, [customOptions]);
+  const brandingSubtypes = useMemo(() => {
+    return [...DEFAULT_BRANDING_SUBTYPES, ...customOptions.filter((o) => o.category === 'deliverable_subtype').map((o) => o.label)];
+  }, [customOptions]);
 
   const pipelineListId = lists.find((l) => l.name === 'Episode Pipeline')?.id ?? null;
   const workspaceId = lists[0]?.workspace_id ?? null;
@@ -100,7 +111,15 @@ function Workspace() {
       if (patch.status && patch.status !== prev.status) {
         // Notify both assignees of status change
         const epNum = updated.episode_number ?? updated.title;
-        const msg = `${actorName} moved ${epNum} to ${patch.status.replace(/_/g, ' ')}`;
+        const statusLabel = WORKFLOW_STATUSES.find((s) => s.key === patch.status)?.short ?? patch.status.replace(/_/g, ' ');
+        const msg = `${actorName} moved task '${epNum}' to ${statusLabel}`;
+        // Real-time toast + chime for Operations Manager (when they're not the actor)
+        if (isOpsManager && currentUserId) {
+          const isActor = prev.writer_assignee_id === currentUserId || prev.editor_assignee_id === currentUserId;
+          if (!isActor) {
+            showToast(msg, 'info', true);
+          }
+        }
         [updated.writer_assignee_id, updated.editor_assignee_id].forEach((aid) => {
           if (!aid) return;
           const member = teamMembers.find((m) => m.id === aid);
@@ -313,6 +332,8 @@ function Workspace() {
         onUpdate={handleUpdate}
         onDelete={handleDelete}
         canDelete={canDelete}
+        deliverableTypes={deliverableTypes}
+        brandingSubtypes={brandingSubtypes}
       />
 
       {/* Brand create/edit modal */}
@@ -339,6 +360,7 @@ function Workspace() {
         onEdit={openEditTask}
         onAddComment={handleAddComment}
         onMention={handleMention}
+        brandingSubtypes={brandingSubtypes}
       />
 
       <EditProfileModal
@@ -352,6 +374,13 @@ function Workspace() {
         episodes={episodes}
         clients={clients}
         teamMembers={teamMembers}
+        customOptions={customOptions}
+        onCreateCustomOption={createCustomOption}
+        onDeleteCustomOption={deleteCustomOption}
+        onPurgeAllTasksAndClients={purgeAllTasksAndClients}
+        onResetEverything={resetEverything}
+        isOpsManager={isOpsManager}
+        currentUserId={currentUserId}
       />
     </div>
   );
@@ -376,9 +405,11 @@ export default function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <ErrorBoundary>
-          <AppInner />
-        </ErrorBoundary>
+        <ToastProvider>
+          <ErrorBoundary>
+            <AppInner />
+          </ErrorBoundary>
+        </ToastProvider>
       </AuthProvider>
     </ThemeProvider>
   );

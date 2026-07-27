@@ -27,7 +27,7 @@ const FALLBACK_CLIENTS: Client[] = [
       { label: 'Accent', hex: '#F59E0B' },
     ],
     header_font: 'Montserrat', subtitle_font: 'Inter', body_font: 'Inter',
-    nas_path: '/NAS/PodcastStudio/GrowthPod/BrandAssets',
+    nas_paths: ['/NAS/PodcastStudio/GrowthPod/BrandAssets', '/NAS/PodcastStudio/GrowthPod/RawFootage'],
     created_at: new Date().toISOString(),
   },
   {
@@ -43,7 +43,7 @@ const FALLBACK_CLIENTS: Client[] = [
       { label: 'Accent', hex: '#22D3EE' },
     ],
     header_font: 'SF Pro Display', subtitle_font: 'Inter', body_font: 'IBM Plex Mono',
-    nas_path: '/NAS/PodcastStudio/TechTalk/BrandAssets',
+    nas_paths: ['/NAS/PodcastStudio/TechTalk/BrandAssets'],
     created_at: new Date().toISOString(),
   },
   {
@@ -59,7 +59,7 @@ const FALLBACK_CLIENTS: Client[] = [
       { label: 'Accent', hex: '#FACC15' },
     ],
     header_font: 'Satoshi', subtitle_font: 'Satoshi', body_font: 'Inter',
-    nas_path: '/NAS/PodcastStudio/CreatorBiz/BrandAssets',
+    nas_paths: ['/NAS/PodcastStudio/CreatorBiz/BrandAssets', '/NAS/PodcastStudio/CreatorBiz/LowerThirds'],
     created_at: new Date().toISOString(),
   },
 ];

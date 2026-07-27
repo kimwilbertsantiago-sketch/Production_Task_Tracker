@@ -14,6 +14,8 @@ interface TaskModalProps {
   onUpdate: (id: string, patch: Partial<Episode>) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   canDelete: boolean;
+  deliverableTypes: string[];
+  brandingSubtypes: string[];
 }
 
 const emptyForm = {
@@ -29,9 +31,11 @@ const emptyForm = {
   frame_io_review_link: '',
   writer_notes_doc: '',
   start_date: '',
+  deliverable_type: '',
+  deliverable_subtype: '',
 };
 
-export function TaskModal({ open, onClose, episode, clients, teamMembers, listId, onCreate, onUpdate, onDelete, canDelete }: TaskModalProps) {
+export function TaskModal({ open, onClose, episode, clients, teamMembers, listId, onCreate, onUpdate, onDelete, canDelete, deliverableTypes, brandingSubtypes }: TaskModalProps) {
   const isEdit = !!episode;
   const [form, setForm] = useState({ ...emptyForm });
   const [busy, setBusy] = useState(false);
@@ -52,6 +56,8 @@ export function TaskModal({ open, onClose, episode, clients, teamMembers, listId
         frame_io_review_link: episode.frame_io_review_link ?? '',
         writer_notes_doc: episode.writer_notes_doc ?? '',
         start_date: episode.start_date ?? '',
+        deliverable_type: episode.deliverable_type ?? '',
+        deliverable_subtype: episode.deliverable_subtype ?? '',
       });
     } else {
       setForm({ ...emptyForm });
@@ -85,6 +91,8 @@ export function TaskModal({ open, onClose, episode, clients, teamMembers, listId
         frame_io_review_link: form.frame_io_review_link || null,
         writer_notes_doc: form.writer_notes_doc || null,
         start_date: form.start_date || null,
+        deliverable_type: form.deliverable_type || null,
+        deliverable_subtype: form.deliverable_type === 'Branding' ? (form.deliverable_subtype || null) : null,
       };
       if (isEdit && episode) {
         await onUpdate(episode.id, payload);
@@ -170,6 +178,26 @@ export function TaskModal({ open, onClose, episode, clients, teamMembers, listId
               {WORKFLOW_STATUSES.map((s, i) => <option key={s.key} value={s.key}>{i + 1}. {s.label}</option>)}
             </select>
           </div>
+        </div>
+
+        {/* Dual assignees */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-medium tf-muted mb-1.5">Deliverable Type</label>
+            <select value={form.deliverable_type} onChange={(e) => { set('deliverable_type', e.target.value); set('deliverable_subtype', ''); }} className="tf-input w-full">
+              <option value="">— None —</option>
+              {deliverableTypes.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
+          {form.deliverable_type === 'Branding' && (
+            <div>
+              <label className="block text-xs font-medium tf-muted mb-1.5">Branding Sub-Type</label>
+              <select value={form.deliverable_subtype} onChange={(e) => set('deliverable_subtype', e.target.value)} className="tf-input w-full">
+                <option value="">— None —</option>
+                {brandingSubtypes.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+          )}
         </div>
 
         {/* Dual assignees */}

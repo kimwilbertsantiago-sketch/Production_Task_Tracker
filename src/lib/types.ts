@@ -56,7 +56,7 @@ export interface Client {
   header_font: string | null;
   subtitle_font: string | null;
   body_font: string | null;
-  nas_path: string | null;
+  nas_paths: string[] | null;
   created_at: string;
 }
 
@@ -83,6 +83,8 @@ export interface Episode {
   start_date: string | null;
   target_release_date: string | null;
   notes: string | null;
+  deliverable_type: string | null;
+  deliverable_subtype: string | null;
   sort_order: number;
   created_by: string | null;
   created_at: string;
@@ -186,6 +188,17 @@ export const ROLE_THEMES: Record<UserRole, RoleTheme> = {
     hex: '#10B981',
   },
 };
+
+export interface CustomOption {
+  id: string;
+  workspace_id: string | null;
+  category: 'deliverable_type' | 'deliverable_subtype';
+  label: string;
+  created_at: string;
+}
+
+export const DEFAULT_DELIVERABLE_TYPES = ['Full EP', 'Shorts', 'Teaser', 'Branding'];
+export const DEFAULT_BRANDING_SUBTYPES = ['Logo', 'Thumbnail', 'Lower Thirds', 'Intro', 'Logo Animation'];
 
 export interface DemoUser {
   email: string;

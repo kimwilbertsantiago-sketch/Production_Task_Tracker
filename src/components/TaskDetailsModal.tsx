@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Episode, Client, TeamMember, Comment, EpisodeStatus, WORKFLOW_STATUSES, STATUS_MAP } from '@/lib/types';
-import { ExternalLink, Copy, Check, FolderTree, Link as LinkIcon, Clapperboard, Film, FileText, Calendar, User, Pencil } from 'lucide-react';
+import { ExternalLink, Copy, Check, FolderTree, Link as LinkIcon, Clapperboard, Film, FileText, Calendar, User, Pencil, Package } from 'lucide-react';
 import { Badge, Avatar } from '@/components/ui/Avatar';
 import { CommentsSection } from '@/components/CommentsSection';
 
@@ -18,6 +18,7 @@ interface TaskDetailsModalProps {
   onEdit: (episode: Episode) => void;
   onAddComment: (episodeId: string, authorId: string | null, body: string) => Promise<Comment | null>;
   onMention: (mentionedMember: TeamMember, episodeId: string) => void;
+  brandingSubtypes: string[];
 }
 
 function LinkRow({ icon: Icon, label, value }: { icon: typeof LinkIcon; label: string; value: string | null }) {
@@ -50,7 +51,7 @@ function LinkRow({ icon: Icon, label, value }: { icon: typeof LinkIcon; label: s
 
 export function TaskDetailsModal({
   open, onClose, episode, clients, teamMembers, comments, currentMemberId, canEdit,
-  onUpdateStatus, onEdit, onAddComment, onMention,
+  onUpdateStatus, onEdit, onAddComment, onMention, brandingSubtypes,
 }: TaskDetailsModalProps) {
   const [status, setStatus] = useState<EpisodeStatus>('cleaning');
   const [saving, setSaving] = useState(false);
@@ -116,6 +117,21 @@ export function TaskDetailsModal({
             ))}
           </select>
         </div>
+
+        {/* Deliverable type */}
+        {(episode.deliverable_type || episode.deliverable_subtype) && (
+          <div className="rounded-lg border tf-border p-3">
+            <div className="flex items-center gap-1.5 text-[10px] tf-muted mb-1">
+              <Package className="h-3 w-3" /> Deliverable
+            </div>
+            <div className="text-xs tf-text">
+              {episode.deliverable_type ?? '—'}
+              {episode.deliverable_type === 'Branding' && episode.deliverable_subtype && (
+                <span className="tf-muted"> · {episode.deliverable_subtype}</span>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Assignees */}
         <div className="grid grid-cols-2 gap-3">
