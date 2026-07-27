@@ -201,3 +201,10 @@ export const DEMO_USERS: DemoUser[] = [
   { email: 'alex@taskflow.studio', password: 'taskflow123', name: 'Alex Rivera', role: 'Writer', defaultView: 'kanban', avatarColor: '#F59E0B' },
   { email: 'devin@taskflow.studio', password: 'taskflow123', name: 'Devin Park', role: 'Video Editor', defaultView: 'table', avatarColor: '#10B981' },
 ];
+
+export const DEMO_EMAILS = new Set(DEMO_USERS.map((u) => u.email.toLowerCase()));
+
+export function isDemoEmail(email: string | null | undefined): boolean {
+  if (!email) return false;
+  return DEMO_EMAILS.has(email.toLowerCase());
+}

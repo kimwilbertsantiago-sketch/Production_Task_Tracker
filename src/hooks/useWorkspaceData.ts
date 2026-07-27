@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Episode, Client, Booking, ListRow, EpisodeStatus, TeamMember, Comment, Notification, NotificationType } from '@/lib/types';
+import { Episode, Client, Booking, ListRow, EpisodeStatus, TeamMember, Comment, Notification, NotificationType, isDemoEmail } from '@/lib/types';
 import { FALLBACK_DATA } from '@/lib/fallbackData';
 
 interface WorkspaceData {
@@ -23,13 +23,14 @@ interface WorkspaceData {
   deleteEpisode: (id: string) => Promise<void>;
   createClient: (payload: Partial<Client>) => Promise<Client | null>;
   updateClient: (id: string, patch: Partial<Client>) => Promise<void>;
+  deleteClient: (id: string) => Promise<void>;
   addComment: (episodeId: string, authorId: string | null, body: string) => Promise<Comment | null>;
   markNotificationRead: (id: string) => Promise<void>;
   markAllNotificationsRead: () => Promise<void>;
   createNotification: (payload: { userId: string; episodeId?: string | null; type: NotificationType; message: string; actorName?: string | null }) => Promise<void>;
 }
 
-export function useWorkspaceData(currentUserId?: string): WorkspaceData {
+export function useWorkspaceData(currentUserId?: string, isDemoUser?: boolean): WorkspaceData {
   const [lists, setLists] = useState<ListRow[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [episodes, setEpisodes] = useState<Episode[]>([]);
@@ -57,28 +58,46 @@ export function useWorkspaceData(currentUserId?: string): WorkspaceData {
       const firstError = listsRes.error || clientsRes.error || episodesRes.error || bookingsRes.error || membersRes.error || commentsRes.error;
       if (firstError) throw firstError;
 
+      const allMembers = (membersRes.data as TeamMember[]) ?? [];
+      // Real (non-demo) users: filter out demo team members so they don't pollute real workflows
+      const visibleMembers = isDemoUser
+        ? allMembers
+        : allMembers.filter((m) => !isDemoEmail(m.email));
+
       setLists((listsRes.data as ListRow[]) ?? []);
       setClients((clientsRes.data as Client[]) ?? []);
       setEpisodes((episodesRes.data as Episode[]) ?? []);
       setBookings((bookingsRes.data as Booking[]) ?? []);
-      setTeamMembers((membersRes.data as TeamMember[]) ?? []);
+      setTeamMembers(visibleMembers);
       setComments((commentsRes.data as Comment[]) ?? []);
       setUsingFallback(false);
     } catch (err) {
-      console.warn('[useWorkspaceData] Database fetch failed, using fallback seed data:', err);
-      setLists(FALLBACK_DATA.lists);
-      setClients(FALLBACK_DATA.clients);
-      setEpisodes(FALLBACK_DATA.episodes);
-      setBookings(FALLBACK_DATA.bookings);
-      setTeamMembers(FALLBACK_DATA.teamMembers);
-      setComments([]);
-      setNotifications([]);
-      setUsingFallback(true);
+      console.warn('[useWorkspaceData] Database fetch failed:', err);
+      // Demo users get sample data; real users get clean empty workspace
+      if (isDemoUser) {
+        setLists(FALLBACK_DATA.lists);
+        setClients(FALLBACK_DATA.clients);
+        setEpisodes(FALLBACK_DATA.episodes);
+        setBookings(FALLBACK_DATA.bookings);
+        setTeamMembers(FALLBACK_DATA.teamMembers);
+        setComments([]);
+        setNotifications([]);
+        setUsingFallback(true);
+      } else {
+        setLists([]);
+        setClients([]);
+        setEpisodes([]);
+        setBookings([]);
+        setTeamMembers([]);
+        setComments([]);
+        setNotifications([]);
+        setUsingFallback(false);
+      }
       setError(null);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isDemoUser]);
 
   const fetchNotifications = useCallback(async () => {
     if (!currentUserId) return;
@@ -246,6 +265,17 @@ export function useWorkspaceData(currentUserId?: string): WorkspaceData {
     }
   }, [usingFallback]);
 
+  const deleteClient = useCallback(async (id: string) => {
+    setClients((prev) => prev.filter((c) => c.id !== id));
+    if (usingFallback) return;
+    try {
+      const { error: deleteError } = await supabase.from('clients').delete().eq('id', id);
+      if (deleteError) throw deleteError;
+    } catch (err) {
+      console.warn('[useWorkspaceData] deleteClient failed:', err);
+    }
+  }, [usingFallback]);
+
   const addComment = useCallback(async (episodeId: string, authorId: string | null, body: string): Promise<Comment | null> => {
     if (usingFallback) {
       const newComment: Comment = {
@@ -334,6 +364,7 @@ export function useWorkspaceData(currentUserId?: string): WorkspaceData {
     deleteEpisode,
     createClient,
     updateClient,
+    deleteClient,
     addComment,
     markNotificationRead,
     markAllNotificationsRead,

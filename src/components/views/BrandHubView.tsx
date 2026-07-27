@@ -1,14 +1,16 @@
 import { useState, useMemo } from 'react';
 import { Client, Episode } from '@/lib/types';
-import { Palette, Type, FolderTree, FileText, Film, Plus, Pencil, ExternalLink, Search, X, ChevronRight } from 'lucide-react';
+import { Palette, Type, FolderTree, FileText, Film, Plus, Pencil, ExternalLink, Search, X, ChevronRight, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/Avatar';
 
 interface BrandHubViewProps {
   clients: Client[];
   episodes: Episode[];
   canEdit: boolean;
+  canDelete: boolean;
   onAddBrand: () => void;
   onEditBrand: (client: Client) => void;
+  onDeleteBrand: (client: Client) => void;
 }
 
 type SortKey = 'name' | 'active';
@@ -27,9 +29,10 @@ function SortSelect({ value, onChange }: { value: SortKey; onChange: (v: SortKey
   );
 }
 
-export function BrandHubView({ clients, episodes, canEdit, onAddBrand, onEditBrand }: BrandHubViewProps) {
+export function BrandHubView({ clients, episodes, canEdit, canDelete, onAddBrand, onEditBrand, onDeleteBrand }: BrandHubViewProps) {
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<SortKey>('name');
+  const [confirmDelete, setConfirmDelete] = useState<Client | null>(null);
 
   const hasFilters = !!search;
 
@@ -94,7 +97,7 @@ export function BrandHubView({ clients, episodes, canEdit, onAddBrand, onEditBra
         )}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-5 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
         {filtered.map((client) => {
           const clientEpisodes = episodes.filter((e) => e.client_id === client.id);
           const activeCount = clientEpisodes.filter((e) => e.status !== 'completed_delivered').length;
@@ -111,14 +114,25 @@ export function BrandHubView({ clients, episodes, canEdit, onAddBrand, onEditBra
                 ) : (
                   <span className="text-lg font-semibold text-white">{client.name}</span>
                 )}
-                {canEdit && (
-                  <button
-                    onClick={() => onEditBrand(client)}
-                    className="absolute top-2 right-2 tf-btn tf-btn-ghost p-1.5 bg-black/30 hover:bg-black/50 rounded-lg"
-                  >
-                    <Pencil className="h-3.5 w-3.5 text-white" />
-                  </button>
-                )}
+                <div className="absolute top-2 right-2 flex items-center gap-1">
+                  {canEdit && (
+                    <button
+                      onClick={() => onEditBrand(client)}
+                      className="tf-btn tf-btn-ghost p-1.5 bg-black/30 hover:bg-black/50 rounded-lg"
+                    >
+                      <Pencil className="h-3.5 w-3.5 text-white" />
+                    </button>
+                  )}
+                  {canDelete && (
+                    <button
+                      onClick={() => setConfirmDelete(client)}
+                      className="tf-btn tf-btn-ghost p-1.5 bg-black/30 hover:bg-red-500/80 rounded-lg"
+                      title="Delete brand"
+                    >
+                      <Trash2 className="h-3.5 w-3.5 text-white" />
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div className="p-5 flex-1 flex flex-col">
@@ -229,6 +243,33 @@ export function BrandHubView({ clients, episodes, canEdit, onAddBrand, onEditBra
           </div>
         )}
       </div>
+
+      {/* Delete confirmation */}
+      {confirmDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setConfirmDelete(null)}>
+          <div className="tf-card border tf-border rounded-2xl p-6 max-w-sm w-full tf-fade-in" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="h-10 w-10 rounded-full bg-red-500/15 flex items-center justify-center">
+                <Trash2 className="h-5 w-5 text-red-500" />
+              </div>
+              <h3 className="text-sm font-semibold tf-text">Delete brand?</h3>
+            </div>
+            <p className="text-xs tf-muted mb-5">
+              Are you sure you want to delete <span className="font-semibold tf-text">{confirmDelete.name}</span>? This will permanently remove the brand from the Brand Hub. Episodes assigned to this client will keep their data but lose the brand reference.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setConfirmDelete(null)} className="tf-btn tf-btn-outline">Cancel</button>
+              <button
+                onClick={() => { onDeleteBrand(confirmDelete); setConfirmDelete(null); }}
+                className="tf-btn bg-red-500 hover:bg-red-600 text-white border-red-500"
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete brand
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

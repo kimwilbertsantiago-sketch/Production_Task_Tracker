@@ -20,7 +20,7 @@ import { Episode, Client, EpisodeStatus, TeamMember, NotificationType, Notificat
 import { Loader2, AlertCircle } from 'lucide-react';
 
 function Workspace() {
-  const { profile, user } = useAuth();
+  const { profile, user, isDemoUser } = useAuth();
   const canEdit = true;
   const canDelete = canDeleteTasks(profile?.role);
   const isOpsManager = profile?.role === 'Operations Manager';
@@ -39,9 +39,9 @@ function Workspace() {
     lists, clients, episodes, bookings, teamMembers, comments, notifications,
     loading, error, usingFallback,
     updateEpisode, updateEpisodeStatus, createEpisode, deleteEpisode,
-    createClient, updateClient,
+    createClient, updateClient, deleteClient,
     addComment, markNotificationRead, markAllNotificationsRead, createNotification,
-  } = useWorkspaceData(currentUserId);
+  } = useWorkspaceData(currentUserId, isDemoUser);
 
   const pipelineListId = lists.find((l) => l.name === 'Episode Pipeline')?.id ?? null;
   const workspaceId = lists[0]?.workspace_id ?? null;
@@ -175,6 +175,10 @@ function Workspace() {
     setBrandModalOpen(true);
   };
 
+  const handleDeleteBrand = async (client: Client) => {
+    await deleteClient(client.id);
+  };
+
   const openDetails = (episode: Episode) => {
     setDetailsEpisode(episode);
   };
@@ -220,15 +224,15 @@ function Workspace() {
         onEditProfile={() => setProfileModalOpen(true)}
         onStudioSettings={() => setSettingsModalOpen(true)}
       />
-      {usingFallback && (
+      {usingFallback && isDemoUser && (
         <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2 text-center">
           <span className="text-[11px] text-amber-600 dark:text-amber-400">
-            Showing offline sample data — database connection unavailable. Changes won't be saved.
+            Demo mode — showing sample workspace data. Changes won't be saved.
           </span>
         </div>
       )}
       <main className="flex-1 overflow-hidden">
-        <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 h-full">
+        <div className={`mx-auto w-full h-full ${view === 'kanban' ? 'max-w-[100vw] px-4 sm:px-6 lg:px-8' : view === 'table' ? 'max-w-[90rem] px-4 sm:px-6 lg:px-8' : 'max-w-7xl px-4 sm:px-6 lg:px-8'}`}>
           {view === 'kanban' && (
             <KanbanBoard
               episodes={pipelineEpisodes}
@@ -265,8 +269,10 @@ function Workspace() {
               clients={clients}
               episodes={episodes}
               canEdit={canEdit}
+              canDelete={canDelete}
               onAddBrand={openAddBrand}
               onEditBrand={openEditBrand}
+              onDeleteBrand={handleDeleteBrand}
             />
           )}
           {view === 'analytics' && isOpsManager && (

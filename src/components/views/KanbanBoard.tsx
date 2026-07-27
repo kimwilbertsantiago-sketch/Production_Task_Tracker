@@ -47,7 +47,7 @@ export function KanbanBoard({ episodes, clients, teamMembers, canEdit, onStatusC
   };
 
   return (
-    <div className="flex gap-4 overflow-x-auto py-4 sm:py-6 h-full" style={{ minHeight: 'calc(100vh - 3.5rem)' }}>
+    <div className="flex gap-4 overflow-x-auto overflow-y-hidden py-4 sm:py-6 h-full tf-board-scroll" style={{ minHeight: 'calc(100vh - 3.5rem)' }}>
       {WORKFLOW_STATUSES.map((status, idx) => {
         const colEpisodes = episodes
           .filter((e) => e.status === status.key)
@@ -58,7 +58,7 @@ export function KanbanBoard({ episodes, clients, teamMembers, canEdit, onStatusC
             key={status.key}
             onDragOver={(e) => handleDragOver(e, status.key)}
             onDrop={(e) => handleDrop(e, status.key)}
-            className={`flex flex-col w-[280px] shrink-0 rounded-xl border tf-border tf-card transition-colors ${isOver ? 'drag-over-column' : ''}`}
+            className={`flex flex-col min-w-[280px] w-[280px] max-w-[280px] shrink-0 rounded-xl border tf-border tf-card transition-colors ${isOver ? 'drag-over-column' : ''}`}
           >
             {/* Column header */}
             <div className="flex items-center justify-between px-3 py-3 border-b tf-border">

@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
-import { DEMO_USERS, DemoUser, UserRole, ROLES } from '@/lib/types';
+import { DEMO_USERS, DemoUser, UserRole, ROLES, isDemoEmail } from '@/lib/types';
 
 const VALID_ROLES = new Set<string>(ROLES);
 const STALE_ROLE_VALUES = ['CSR', 'csr', 'Editor'];
@@ -35,6 +35,7 @@ interface AuthContextValue {
   session: Session | null;
   user: User | null;
   profile: DemoUser | null;
+  isDemoUser: boolean;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signUp: (email: string, password: string, name: string, role: UserRole) => Promise<{ error: string | null }>;
@@ -71,6 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<DemoUser | null>(null);
+  const [isDemoUser, setIsDemoUser] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -79,6 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(data.session);
       setUser(data.session?.user ?? null);
       setProfile(deriveProfileFromMeta(data.session?.user ?? null));
+      setIsDemoUser(isDemoEmail(data.session?.user?.email));
       setLoading(false);
     }).catch(() => {
       clearStaleStorage();
@@ -90,6 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(newSession);
         setUser(newSession?.user ?? null);
         setProfile(deriveProfileFromMeta(newSession?.user ?? null));
+        setIsDemoUser(isDemoEmail(newSession?.user?.email));
       })();
     });
 
@@ -114,6 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(data.session);
       setUser(data.user);
       setProfile(deriveProfileFromMeta(data.user));
+      setIsDemoUser(isDemoEmail(data.user.email));
     }
     return { error: null };
   };
@@ -134,6 +139,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(data.session);
         setUser(data.user);
         setProfile(deriveProfileFromMeta(data.user));
+        setIsDemoUser(isDemoEmail(data.user.email));
       }
       const { error: retryError } = await supabase.auth.signInWithPassword({
         email: demoUser.email,
@@ -181,11 +187,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     await supabase.auth.signOut();
     setProfile(null);
+    setIsDemoUser(false);
   };
 
   return (
     <AuthContext.Provider
-      value={{ session, user, profile, loading, signIn, signUp, signOut, quickLogin, updateProfile }}
+      value={{ session, user, profile, isDemoUser, loading, signIn, signUp, signOut, quickLogin, updateProfile }}
     >
       {children}
     </AuthContext.Provider>

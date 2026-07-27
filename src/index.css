@@ -114,6 +114,26 @@
   background: var(--text-muted);
 }
 
+/* Board horizontal scroll — smooth, thin, subtle */
+.tf-board-scroll {
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+}
+.tf-board-scroll::-webkit-scrollbar {
+  height: 8px;
+}
+.tf-board-scroll::-webkit-scrollbar-track {
+  background: var(--bg-subtle);
+  border-radius: 4px;
+}
+.tf-board-scroll::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+.tf-board-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
 /* Drag state */
 .dragging-card {
   opacity: 0.4;
