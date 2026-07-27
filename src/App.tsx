@@ -232,7 +232,7 @@ function Workspace() {
         </div>
       )}
       <main className="flex-1 overflow-hidden">
-        <div className={`mx-auto w-full h-full ${view === 'kanban' ? 'max-w-[100vw] px-4 sm:px-6 lg:px-8' : view === 'table' ? 'max-w-[90rem] px-4 sm:px-6 lg:px-8' : 'max-w-7xl px-4 sm:px-6 lg:px-8'}`}>
+        <div className={`mx-auto w-full h-full ${view === 'kanban' ? 'max-w-[100vw] px-0 sm:px-0 lg:px-0' : view === 'table' ? 'max-w-[90rem] px-4 sm:px-6 lg:px-8' : 'max-w-7xl px-4 sm:px-6 lg:px-8'}`}>
           {view === 'kanban' && (
             <KanbanBoard
               episodes={pipelineEpisodes}

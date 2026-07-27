@@ -76,8 +76,7 @@ function exportFullJson(episodes: Episode[], clients: Client[], teamMembers: Tea
       header_font: c.header_font,
       subtitle_font: c.subtitle_font,
       body_font: c.body_font,
-      asset_drive_path: c.asset_drive_path,
-      template_path: c.template_path,
+      nas_path: c.nas_path,
       notes: c.notes,
     })),
     team_members: teamMembers.map((m) => ({

@@ -26,8 +26,7 @@ const emptyForm = {
   header_font: '',
   subtitle_font: '',
   body_font: '',
-  asset_drive_path: '',
-  template_path: '',
+  nas_path: '',
   notes: '',
 };
 
@@ -46,8 +45,7 @@ export function BrandModal({ open, onClose, client, workspaceId, onCreate, onUpd
         header_font: client.header_font ?? '',
         subtitle_font: client.subtitle_font ?? '',
         body_font: client.body_font ?? '',
-        asset_drive_path: client.asset_drive_path ?? '',
-        template_path: client.template_path ?? '',
+        nas_path: client.nas_path ?? '',
         notes: client.notes ?? '',
       });
     } else {
@@ -90,8 +88,7 @@ export function BrandModal({ open, onClose, client, workspaceId, onCreate, onUpd
         header_font: form.header_font || null,
         subtitle_font: form.subtitle_font || null,
         body_font: form.body_font || null,
-        asset_drive_path: form.asset_drive_path || null,
-        template_path: form.template_path || null,
+        nas_path: form.nas_path || null,
         notes: form.notes || null,
         primary_hex: primaryHex,
       };
@@ -200,18 +197,12 @@ export function BrandModal({ open, onClose, client, workspaceId, onCreate, onUpd
           </div>
         </div>
 
-        {/* Asset paths */}
+        {/* NAS path */}
         <div className="border-t tf-border pt-4">
-          <h3 className="text-xs font-semibold tf-muted uppercase tracking-wide mb-3">Asset Paths</h3>
-          <div className="space-y-3">
-            <div>
-              <label className="block text-xs font-medium tf-muted mb-1">Asset Drive Path</label>
-              <input value={form.asset_drive_path} onChange={(e) => set('asset_drive_path', e.target.value)} placeholder="/Drive/Client/BrandAssets" className="tf-input w-full font-mono text-xs" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium tf-muted mb-1">DaVinci Template Path</label>
-              <input value={form.template_path} onChange={(e) => set('template_path', e.target.value)} placeholder="DaVinci: /Templates/Client_LowerThird.drp" className="tf-input w-full font-mono text-xs" />
-            </div>
+          <h3 className="text-xs font-semibold tf-muted uppercase tracking-wide mb-3">Asset Storage</h3>
+          <div>
+            <label className="block text-xs font-medium tf-muted mb-1">NAS Path</label>
+            <input value={form.nas_path} onChange={(e) => set('nas_path', e.target.value)} placeholder="/NAS/PodcastStudio/Client/BrandAssets" className="tf-input w-full font-mono text-xs" />
           </div>
         </div>
 

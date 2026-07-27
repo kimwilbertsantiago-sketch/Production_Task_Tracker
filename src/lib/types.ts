@@ -3,6 +3,7 @@ export type EpisodeStatus =
   | 'proofread_cutting'
   | 'instructions_shorts_teaser'
   | 'editing_shorts_teaser'
+  | 'creation_branding'
   | 'writer_qa'
   | 'final_qa'
   | 'completed_delivered';
@@ -55,8 +56,7 @@ export interface Client {
   header_font: string | null;
   subtitle_font: string | null;
   body_font: string | null;
-  asset_drive_path: string | null;
-  template_path: string | null;
+  nas_path: string | null;
   created_at: string;
 }
 
@@ -142,8 +142,9 @@ export interface WorkflowStatus {
 export const WORKFLOW_STATUSES: WorkflowStatus[] = [
   { key: 'cleaning', label: 'Cleaning', short: 'Cleaning', owner: 'Editor', color: '#10B981' },
   { key: 'proofread_cutting', label: 'Proofread & Cutting', short: 'Proofread', owner: 'Writer', color: '#F59E0B' },
-  { key: 'instructions_shorts_teaser', label: 'Instructions (Shorts & Teaser)', short: 'Instructions', owner: 'Writer', color: '#F97316' },
-  { key: 'editing_shorts_teaser', label: 'Editing (Shorts & Teaser)', short: 'Editing', owner: 'Editor', color: '#FB923C' },
+  { key: 'instructions_shorts_teaser', label: 'Editing Instructions', short: 'Edit Instructions', owner: 'Writer', color: '#F97316' },
+  { key: 'editing_shorts_teaser', label: 'Editing Shorts/Teaser', short: 'Editing Shorts', owner: 'Editor', color: '#FB923C' },
+  { key: 'creation_branding', label: 'Creation Branding', short: 'Creation Branding', owner: 'Editor', color: '#8B5CF6' },
   { key: 'writer_qa', label: 'Writer QA', short: 'Writer QA', owner: 'Writer', color: '#EC4899' },
   { key: 'final_qa', label: 'Final QA', short: 'Final QA', owner: 'Ops Manager', color: '#EF4444' },
   { key: 'completed_delivered', label: 'Completed & Delivered', short: 'Delivered', owner: 'Ops Manager', color: '#22C55E' },

@@ -46,8 +46,7 @@ export function BrandHubView({ clients, episodes, canEdit, canDelete, onAddBrand
         c.subtitle_font ?? '',
         c.body_font ?? '',
         c.notes ?? '',
-        c.asset_drive_path ?? '',
-        c.template_path ?? '',
+        c.nas_path ?? '',
       ].join(' ').toLowerCase();
       return haystack.includes(q);
     });
@@ -67,7 +66,7 @@ export function BrandHubView({ clients, episodes, canEdit, canDelete, onAddBrand
       <div className="flex items-center justify-between mb-5">
         <div>
           <h2 className="text-base font-semibold tf-text">Client Brand Hub</h2>
-          <p className="text-xs tf-muted mt-0.5">Brand colors, fonts, and DaVinci lower-third templates for every client.</p>
+          <p className="text-xs tf-muted mt-0.5">Brand colors, fonts, and asset storage for every client.</p>
         </div>
         {canEdit && (
           <button onClick={onAddBrand} className="tf-btn tf-btn-primary">
@@ -185,24 +184,19 @@ export function BrandHubView({ clients, episodes, canEdit, canDelete, onAddBrand
                   </div>
                 )}
 
-                {/* Asset paths */}
+                {/* NAS path */}
                 <div className="mb-4">
                   <label className="flex items-center gap-1.5 text-[11px] font-medium tf-muted mb-1.5">
                     <FolderTree className="h-3.5 w-3.5" />
-                    Asset Paths
+                    NAS Path
                   </label>
-                  <div className="space-y-1">
-                    {client.asset_drive_path && (
-                      <code className="block text-[10px] font-mono tf-text tf-bg-subtle rounded-md px-2 py-1 break-all">
-                        {client.asset_drive_path}
-                      </code>
-                    )}
-                    {client.template_path && (
-                      <code className="block text-[10px] font-mono tf-text tf-bg-subtle rounded-md px-2 py-1 break-all">
-                        {client.template_path}
-                      </code>
-                    )}
-                  </div>
+                  {client.nas_path ? (
+                    <code className="block text-[10px] font-mono tf-text tf-bg-subtle rounded-md px-2 py-1 break-all">
+                      {client.nas_path}
+                    </code>
+                  ) : (
+                    <span className="text-[10px] tf-muted italic">No NAS path set</span>
+                  )}
                 </div>
 
                 {/* Notes */}
