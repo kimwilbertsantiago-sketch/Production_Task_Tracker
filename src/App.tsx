@@ -357,9 +357,11 @@ function Workspace() {
         currentMemberId={currentMemberId}
         canEdit={canEdit}
         onUpdateStatus={updateEpisodeStatus}
+        onUpdate={handleUpdate}
         onEdit={openEditTask}
         onAddComment={handleAddComment}
         onMention={handleMention}
+        deliverableTypes={deliverableTypes}
         brandingSubtypes={brandingSubtypes}
       />
 
@@ -374,9 +376,6 @@ function Workspace() {
         episodes={episodes}
         clients={clients}
         teamMembers={teamMembers}
-        customOptions={customOptions}
-        onCreateCustomOption={createCustomOption}
-        onDeleteCustomOption={deleteCustomOption}
         onPurgeAllTasksAndClients={purgeAllTasksAndClients}
         onResetEverything={resetEverything}
         isOpsManager={isOpsManager}

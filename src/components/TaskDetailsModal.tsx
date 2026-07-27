@@ -15,9 +15,11 @@ interface TaskDetailsModalProps {
   currentMemberId: string | null;
   canEdit: boolean;
   onUpdateStatus: (id: string, status: EpisodeStatus) => Promise<void>;
+  onUpdate: (id: string, patch: Partial<Episode>) => Promise<void>;
   onEdit: (episode: Episode) => void;
   onAddComment: (episodeId: string, authorId: string | null, body: string) => Promise<Comment | null>;
   onMention: (mentionedMember: TeamMember, episodeId: string) => void;
+  deliverableTypes: string[];
   brandingSubtypes: string[];
 }
 
@@ -51,13 +53,20 @@ function LinkRow({ icon: Icon, label, value }: { icon: typeof LinkIcon; label: s
 
 export function TaskDetailsModal({
   open, onClose, episode, clients, teamMembers, comments, currentMemberId, canEdit,
-  onUpdateStatus, onEdit, onAddComment, onMention, brandingSubtypes,
+  onUpdateStatus, onUpdate, onEdit, onAddComment, onMention, deliverableTypes, brandingSubtypes,
 }: TaskDetailsModalProps) {
   const [status, setStatus] = useState<EpisodeStatus>('cleaning');
   const [saving, setSaving] = useState(false);
+  const [deliverableType, setDeliverableType] = useState<string>('');
+  const [deliverableSubtype, setDeliverableSubtype] = useState<string>('');
+  const [deliverableSaving, setDeliverableSaving] = useState(false);
 
   useEffect(() => {
-    if (episode) setStatus(episode.status);
+    if (episode) {
+      setStatus(episode.status);
+      setDeliverableType(episode.deliverable_type ?? '');
+      setDeliverableSubtype(episode.deliverable_subtype ?? '');
+    }
   }, [episode]);
 
   if (!episode) return null;
@@ -74,6 +83,30 @@ export function TaskDetailsModal({
       await onUpdateStatus(episode.id, newStatus);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDeliverableTypeChange = async (value: string) => {
+    setDeliverableType(value);
+    if (!canEdit) return;
+    const newSubtype = value === 'Branding' ? deliverableSubtype : '';
+    if (value !== 'Branding') setDeliverableSubtype('');
+    setDeliverableSaving(true);
+    try {
+      await onUpdate(episode.id, { deliverable_type: value || null, deliverable_subtype: newSubtype || null });
+    } finally {
+      setDeliverableSaving(false);
+    }
+  };
+
+  const handleDeliverableSubtypeChange = async (value: string) => {
+    setDeliverableSubtype(value);
+    if (!canEdit) return;
+    setDeliverableSaving(true);
+    try {
+      await onUpdate(episode.id, { deliverable_subtype: value || null });
+    } finally {
+      setDeliverableSaving(false);
     }
   };
 
@@ -118,20 +151,41 @@ export function TaskDetailsModal({
           </select>
         </div>
 
-        {/* Deliverable type */}
-        {(episode.deliverable_type || episode.deliverable_subtype) && (
-          <div className="rounded-lg border tf-border p-3">
-            <div className="flex items-center gap-1.5 text-[10px] tf-muted mb-1">
-              <Package className="h-3 w-3" /> Deliverable
-            </div>
-            <div className="text-xs tf-text">
-              {episode.deliverable_type ?? '—'}
-              {episode.deliverable_type === 'Branding' && episode.deliverable_subtype && (
-                <span className="tf-muted"> · {episode.deliverable_subtype}</span>
-              )}
-            </div>
+        {/* Deliverable type & sub-type */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="flex items-center gap-1.5 text-xs font-medium tf-muted mb-1.5">
+              <Package className="h-3.5 w-3.5" />
+              Deliverable Type {deliverableSaving && <span className="text-[10px]">saving...</span>}
+            </label>
+            <select
+              value={deliverableType}
+              onChange={(e) => handleDeliverableTypeChange(e.target.value)}
+              disabled={!canEdit}
+              className="tf-input w-full disabled:opacity-70"
+            >
+              <option value="">— None —</option>
+              {deliverableTypes.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
           </div>
-        )}
+          {deliverableType === 'Branding' && (
+            <div>
+              <label className="flex items-center gap-1.5 text-xs font-medium tf-muted mb-1.5">
+                <Package className="h-3.5 w-3.5" />
+                Branding Sub-Type
+              </label>
+              <select
+                value={deliverableSubtype}
+                onChange={(e) => handleDeliverableSubtypeChange(e.target.value)}
+                disabled={!canEdit}
+                className="tf-input w-full disabled:opacity-70"
+              >
+                <option value="">— None —</option>
+                {brandingSubtypes.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+          )}
+        </div>
 
         {/* Assignees */}
         <div className="grid grid-cols-2 gap-3">

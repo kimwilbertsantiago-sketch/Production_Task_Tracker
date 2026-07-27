@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Modal } from '@/components/ui/Modal';
-import { Episode, Client, TeamMember, CustomOption, DEFAULT_DELIVERABLE_TYPES, DEFAULT_BRANDING_SUBTYPES } from '@/lib/types';
-import { Download, FileSpreadsheet, FileJson, Loader2, Plus, Trash2, AlertTriangle, Package, X } from 'lucide-react';
+import { Episode, Client, TeamMember } from '@/lib/types';
+import { Download, FileSpreadsheet, FileJson, Loader2, Trash2, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 interface StudioSettingsModalProps {
@@ -10,9 +10,6 @@ interface StudioSettingsModalProps {
   episodes: Episode[];
   clients: Client[];
   teamMembers: TeamMember[];
-  customOptions: CustomOption[];
-  onCreateCustomOption: (category: CustomOption['category'], label: string) => Promise<void>;
-  onDeleteCustomOption: (id: string) => Promise<void>;
   onPurgeAllTasksAndClients: () => Promise<void>;
   onResetEverything: () => Promise<void>;
   isOpsManager: boolean;
@@ -106,13 +103,11 @@ function exportFullJson(episodes: Episode[], clients: Client[], teamMembers: Tea
 }
 
 export function StudioSettingsModal({
-  open, onClose, episodes, clients, teamMembers, customOptions,
-  onCreateCustomOption, onDeleteCustomOption, onPurgeAllTasksAndClients, onResetEverything,
+  open, onClose, episodes, clients, teamMembers,
+  onPurgeAllTasksAndClients, onResetEverything,
   isOpsManager, currentUserId,
 }: StudioSettingsModalProps) {
   const [busy, setBusy] = useState<string | null>(null);
-  const [newTypeLabel, setNewTypeLabel] = useState('');
-  const [newSubtypeLabel, setNewSubtypeLabel] = useState('');
   const [dangerAction, setDangerAction] = useState<DangerAction | null>(null);
   const [dangerInput, setDangerInput] = useState('');
   const [dangerBusy, setDangerBusy] = useState(false);
@@ -126,15 +121,6 @@ export function StudioSettingsModal({
     }
   }, [open]);
 
-  const deliverableTypeOptions = [
-    ...DEFAULT_DELIVERABLE_TYPES,
-    ...customOptions.filter((o) => o.category === 'deliverable_type').map((o) => o.label),
-  ];
-  const brandingSubtypeOptions = [
-    ...DEFAULT_BRANDING_SUBTYPES,
-    ...customOptions.filter((o) => o.category === 'deliverable_subtype').map((o) => o.label),
-  ];
-
   const handleExportCsv = () => {
     setBusy('csv');
     try { exportTasksCsv(episodes, clients, teamMembers); } finally { setBusy(null); }
@@ -143,28 +129,6 @@ export function StudioSettingsModal({
   const handleExportJson = () => {
     setBusy('json');
     try { exportFullJson(episodes, clients, teamMembers); } finally { setBusy(null); }
-  };
-
-  const handleAddType = async () => {
-    if (!newTypeLabel.trim()) return;
-    setBusy('addType');
-    try {
-      await onCreateCustomOption('deliverable_type', newTypeLabel);
-      setNewTypeLabel('');
-    } finally { setBusy(null); }
-  };
-
-  const handleAddSubtype = async () => {
-    if (!newSubtypeLabel.trim()) return;
-    setBusy('addSubtype');
-    try {
-      await onCreateCustomOption('deliverable_subtype', newSubtypeLabel);
-      setNewSubtypeLabel('');
-    } finally { setBusy(null); }
-  };
-
-  const handleDeleteOption = async (id: string) => {
-    await onDeleteCustomOption(id);
   };
 
   const handleDeleteNonAdminUsers = async () => {
@@ -223,7 +187,7 @@ export function StudioSettingsModal({
       open={open}
       onClose={onClose}
       title="Studio Settings"
-      subtitle="Export data, manage deliverable options, and danger zone controls"
+      subtitle="Export data and danger zone controls"
       maxWidth="max-w-lg"
       footer={<button onClick={onClose} className="tf-btn tf-btn-outline">Close</button>}
     >
@@ -260,81 +224,6 @@ export function StudioSettingsModal({
             </div>
           </div>
         </div>
-
-        {/* Custom deliverable options */}
-        {isOpsManager && (
-          <div className="border-t tf-border pt-4">
-            <h3 className="text-xs font-semibold tf-muted uppercase tracking-wide mb-3 flex items-center gap-1.5">
-              <Package className="h-3.5 w-3.5" /> Deliverable Options
-            </h3>
-            <div className="space-y-3">
-              <div>
-                <label className="text-[11px] font-medium tf-muted mb-1.5 block">Deliverable Types</label>
-                <div className="flex flex-wrap gap-1.5 mb-2">
-                  {deliverableTypeOptions.map((label) => {
-                    const isCustom = !DEFAULT_DELIVERABLE_TYPES.includes(label);
-                    const opt = customOptions.find((o) => o.category === 'deliverable_type' && o.label === label);
-                    return (
-                      <span key={label} className="inline-flex items-center gap-1 text-[10px] tf-text tf-bg-subtle rounded-md px-2 py-1">
-                        {label}
-                        {isCustom && opt && (
-                          <button onClick={() => handleDeleteOption(opt.id)} className="text-red-500 hover:text-red-600">
-                            <X className="h-3 w-3" />
-                          </button>
-                        )}
-                      </span>
-                    );
-                  })}
-                </div>
-                <div className="flex gap-2">
-                  <input
-                    value={newTypeLabel}
-                    onChange={(e) => setNewTypeLabel(e.target.value)}
-                    placeholder="Add custom type…"
-                    className="tf-input flex-1 text-xs"
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddType()}
-                  />
-                  <button onClick={handleAddType} disabled={busy === 'addType'} className="tf-btn tf-btn-outline text-xs shrink-0">
-                    {busy === 'addType' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-                    Add
-                  </button>
-                </div>
-              </div>
-              <div>
-                <label className="text-[11px] font-medium tf-muted mb-1.5 block">Branding Sub-Types</label>
-                <div className="flex flex-wrap gap-1.5 mb-2">
-                  {brandingSubtypeOptions.map((label) => {
-                    const isCustom = !DEFAULT_BRANDING_SUBTYPES.includes(label);
-                    const opt = customOptions.find((o) => o.category === 'deliverable_subtype' && o.label === label);
-                    return (
-                      <span key={label} className="inline-flex items-center gap-1 text-[10px] tf-text tf-bg-subtle rounded-md px-2 py-1">
-                        {label}
-                        {isCustom && opt && (
-                          <button onClick={() => handleDeleteOption(opt.id)} className="text-red-500 hover:text-red-600">
-                            <X className="h-3 w-3" />
-                          </button>
-                        )}
-                      </span>
-                    );
-                  })}
-                </div>
-                <div className="flex gap-2">
-                  <input
-                    value={newSubtypeLabel}
-                    onChange={(e) => setNewSubtypeLabel(e.target.value)}
-                    placeholder="Add custom sub-type…"
-                    className="tf-input flex-1 text-xs"
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddSubtype()}
-                  />
-                  <button onClick={handleAddSubtype} disabled={busy === 'addSubtype'} className="tf-btn tf-btn-outline text-xs shrink-0">
-                    {busy === 'addSubtype' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-                    Add
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Danger zone */}
         {isOpsManager && (
