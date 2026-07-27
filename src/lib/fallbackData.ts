@@ -139,10 +139,7 @@ const FALLBACK_EPISODES: Episode[] = [
   },
 ];
 
-const FALLBACK_BOOKINGS: Booking[] = [
-  { id: 'fb-bk-1', workspace_id: 'fb-ws', client_id: 'fb-cl-1', client: FALLBACK_CLIENTS[0], episode_id: 'fb-ep-1', title: 'Growth Pod EP042 — Lenny Rachitsky', booking_date: '2026-08-03', start_time: '10:00', end_time: '12:00', status: 'confirmed', notes: 'Studio A.', created_at: new Date().toISOString() },
-  { id: 'fb-bk-2', workspace_id: 'fb-ws', client_id: 'fb-cl-2', client: FALLBACK_CLIENTS[1], episode_id: 'fb-ep-2', title: 'TechTalk EP117 — Andrej Karpathy', booking_date: '2026-07-29', start_time: '14:00', end_time: '16:00', status: 'confirmed', notes: 'Studio B.', created_at: new Date().toISOString() },
-];
+const FALLBACK_BOOKINGS: Booking[] = [];
 
 const FALLBACK_LISTS: ListRow[] = [
   { id: 'fb-list-1', workspace_id: 'fb-ws', name: 'Episode Pipeline', color: '#3B82F6', sort_order: 0, created_at: new Date().toISOString() },

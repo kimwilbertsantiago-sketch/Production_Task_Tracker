@@ -63,7 +63,7 @@ function LinkCell({ value, onSave, canEdit }: { value: string | null; onSave: (v
   );
 }
 
-const selectClass = "tf-input text-xs py-1.5 pr-7 cursor-pointer";
+const selectClass = "tf-input text-xs py-1.5 pr-7 cursor-pointer appearance-none";
 
 function FilterSelect({ value, onChange, options, allLabel }: { value: string; onChange: (v: string) => void; options: { value: string; label: string }[]; allLabel: string }) {
   return (
