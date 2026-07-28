@@ -1,163 +1,124 @@
 import { useState, useEffect } from 'react';
 import { Modal } from '@/components/ui/Modal';
-import { Episode, Client, TeamMember, Comment, EpisodeStatus, WORKFLOW_STATUSES, STATUS_MAP } from '@/lib/types';
-import { ExternalLink, Copy, Check, FolderTree, Link as LinkIcon, Clapperboard, Film, FileText, Calendar, User, Pencil, Package, X } from 'lucide-react';
-import { Badge, Avatar } from '@/components/ui/Avatar';
-import { CommentsSection } from '@/components/CommentsSection';
+import { Episode, Client, TeamMember, EpisodeStatus, WORKFLOW_STATUSES } from '@/lib/types';
+import { Loader2, Trash2 } from 'lucide-react';
 
-interface TaskDetailsModalProps {
+interface TaskModalProps {
   open: boolean;
   onClose: () => void;
   episode: Episode | null;
   clients: Client[];
   teamMembers: TeamMember[];
-  comments: Comment[];
-  currentMemberId: string | null;
-  canEdit: boolean;
-  onUpdateStatus: (id: string, status: EpisodeStatus) => Promise<void>;
+  listId: string | null;
+  onCreate: (payload: Partial<Episode>) => Promise<Episode | null>;
   onUpdate: (id: string, patch: Partial<Episode>) => Promise<void>;
-  onEdit: (episode: Episode) => void;
-  onAddComment: (episodeId: string, authorId: string | null, body: string) => Promise<Comment | null>;
-  onMention: (mentionedMember: TeamMember, episodeId: string) => void;
+  onDelete: (id: string) => Promise<void>;
+  canDelete: boolean;
   deliverableTypes: string[];
   brandingSubtypes: string[];
 }
 
-function LinkRow({ icon: Icon, label, value }: { icon: typeof LinkIcon; label: string; value: string | null }) {
-  const [copied, setCopied] = useState(false);
-  const copy = async () => {
-    if (!value) return;
-    await navigator.clipboard.writeText(value);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1200);
-  };
-  if (!value) return null;
-  return (
-    <div className="flex items-center gap-2 rounded-lg border tf-border px-3 py-2">
-      <Icon className="h-4 w-4 tf-muted shrink-0" />
-      <div className="min-w-0 flex-1">
-        <div className="text-[10px] tf-muted">{label}</div>
-        <div className="text-xs tf-text truncate font-mono">{value}</div>
-      </div>
-      <button onClick={copy} className="tf-btn tf-btn-ghost p-1.5 shrink-0" title="Copy">
-        {copied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
-      </button>
-      {value.startsWith('http') && (
-        <a href={value} target="_blank" rel="noreferrer" className="tf-btn tf-btn-ghost p-1.5 shrink-0" title="Open">
-          <ExternalLink className="h-3.5 w-3.5" />
-        </a>
-      )}
-    </div>
-  );
-}
+const emptyForm = {
+  title: '',
+  episode_number: '',
+  client_id: '',
+  status: 'cleaning' as EpisodeStatus,
+  writer_assignee_id: '',
+  editor_assignee_id: '',
+  google_drive_raw_link: '',
+  nas_file_path: '',
+  descript_project_link: '',
+  frame_io_review_link: '',
+  writer_notes_doc: '',
+  start_date: '',
+  deliverable_type: '',
+  deliverable_subtype: '',
+};
 
-export function TaskDetailsModal({
-  open, onClose, episode, clients, teamMembers, comments, currentMemberId, canEdit,
-  onUpdateStatus, onUpdate, onEdit, onAddComment, onMention, deliverableTypes, brandingSubtypes,
-}: TaskDetailsModalProps) {
-  const [status, setStatus] = useState<EpisodeStatus>('cleaning');
-  const [saving, setSaving] = useState(false);
-  const [deliverableType, setDeliverableType] = useState<string>('');
-  const [deliverableSubtype, setDeliverableSubtype] = useState<string>('');
-  const [deliverableSaving, setDeliverableSaving] = useState(false);
-  const [writerAssigneeId, setWriterAssigneeId] = useState<string>('');
-  const [editorAssigneeId, setEditorAssigneeId] = useState<string>('');
-  const [assigneeSaving, setAssigneeSaving] = useState(false);
-  const [editTitle, setEditTitle] = useState('');
-  const [editEpNum, setEditEpNum] = useState('');
-  const [headerSaving, setHeaderSaving] = useState(false);
+export function TaskModal({ open, onClose, episode, clients, teamMembers, listId, onCreate, onUpdate, onDelete, canDelete, deliverableTypes, brandingSubtypes }: TaskModalProps) {
+  const isEdit = !!episode;
+  const [form, setForm] = useState({ ...emptyForm });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (episode) {
-      setStatus(episode.status);
-      setDeliverableType(episode.deliverable_type ?? '');
-      setDeliverableSubtype(episode.deliverable_subtype ?? '');
-      setWriterAssigneeId(episode.writer_assignee_id ?? '');
-      setEditorAssigneeId(episode.editor_assignee_id ?? '');
-      setEditTitle(episode.title);
-      setEditEpNum(episode.episode_number ?? '');
+      setForm({
+        title: episode.title,
+        episode_number: episode.episode_number ?? '',
+        client_id: episode.client_id ?? '',
+        status: episode.status,
+        writer_assignee_id: episode.writer_assignee_id ?? '',
+        editor_assignee_id: episode.editor_assignee_id ?? '',
+        google_drive_raw_link: episode.google_drive_raw_link ?? '',
+        nas_file_path: episode.nas_file_path ?? '',
+        descript_project_link: episode.descript_project_link ?? '',
+        frame_io_review_link: episode.frame_io_review_link ?? '',
+        writer_notes_doc: episode.writer_notes_doc ?? '',
+        start_date: episode.start_date ?? '',
+        deliverable_type: episode.deliverable_type ?? '',
+        deliverable_subtype: episode.deliverable_subtype ?? '',
+      });
+    } else {
+      setForm({ ...emptyForm });
     }
-  }, [episode]);
+    setError(null);
+  }, [episode, open]);
 
-  if (!episode) return null;
+  const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
-  const client = clients.find((c) => c.id === episode.client_id);
-  const statusInfo = STATUS_MAP[episode.status];
-
-  // Filtered assignee options
   const writerOptions = teamMembers.filter((m) => m.role === 'Writer');
   const editorOptions = teamMembers.filter((m) => m.role === 'Video Editor');
 
-  const handleStatusChange = async (newStatus: EpisodeStatus) => {
-    setStatus(newStatus);
-    setSaving(true);
+  const handleSave = async () => {
+    if (!form.title.trim()) {
+      setError('Title is required');
+      return;
+    }
+    setBusy(true);
+    setError(null);
     try {
-      await onUpdateStatus(episode.id, newStatus);
+      const payload: Partial<Episode> = {
+        title: form.title.trim(),
+        episode_number: form.episode_number || null,
+        client_id: form.client_id || null,
+        status: form.status,
+        writer_assignee_id: form.writer_assignee_id || null,
+        editor_assignee_id: form.editor_assignee_id || null,
+        google_drive_raw_link: form.google_drive_raw_link || null,
+        nas_file_path: form.nas_file_path || null,
+        descript_project_link: form.descript_project_link || null,
+        frame_io_review_link: form.frame_io_review_link || null,
+        writer_notes_doc: form.writer_notes_doc || null,
+        start_date: form.start_date || null,
+        deliverable_type: form.deliverable_type || null,
+        deliverable_subtype: form.deliverable_type === 'Branding' ? (form.deliverable_subtype || null) : null,
+      };
+      if (isEdit && episode) {
+        await onUpdate(episode.id, payload);
+      } else {
+        if (!listId) throw new Error('No pipeline list found');
+        await onCreate({ ...payload, list_id: listId, sort_order: 0 });
+      }
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save task');
     } finally {
-      setSaving(false);
+      setBusy(false);
     }
   };
 
-  const handleDeliverableTypeChange = async (value: string) => {
-    setDeliverableType(value);
-    if (!canEdit) return;
-    const newSubtype = value === 'Branding' ? deliverableSubtype : '';
-    if (value !== 'Branding') setDeliverableSubtype('');
-    setDeliverableSaving(true);
+  const handleDelete = async () => {
+    if (!canDelete || !episode) return;
+    if (!confirm('Delete this task? This cannot be undone.')) return;
+    setBusy(true);
     try {
-      await onUpdate(episode.id, { deliverable_type: value || null, deliverable_subtype: newSubtype || null });
+      await onDelete(episode.id);
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete task');
     } finally {
-      setDeliverableSaving(false);
-    }
-  };
-
-  const handleDeliverableSubtypeChange = async (value: string) => {
-    setDeliverableSubtype(value);
-    if (!canEdit) return;
-    setDeliverableSaving(true);
-    try {
-      await onUpdate(episode.id, { deliverable_subtype: value || null });
-    } finally {
-      setDeliverableSaving(false);
-    }
-  };
-
-  const handleWriterAssigneeChange = async (value: string) => {
-    setWriterAssigneeId(value);
-    if (!canEdit) return;
-    setAssigneeSaving(true);
-    try {
-      await onUpdate(episode.id, { writer_assignee_id: value || null });
-    } finally {
-      setAssigneeSaving(false);
-    }
-  };
-
-  const handleEditorAssigneeChange = async (value: string) => {
-    setEditorAssigneeId(value);
-    if (!canEdit) return;
-    setAssigneeSaving(true);
-    try {
-      await onUpdate(episode.id, { editor_assignee_id: value || null });
-    } finally {
-      setAssigneeSaving(false);
-    }
-  };
-
-  const saveHeader = async () => {
-    if (!episode) return;
-    const trimmedTitle = editTitle.trim();
-    if (!trimmedTitle) return;
-    const changed = trimmedTitle !== episode.title || (editEpNum.trim() || null) !== (episode.episode_number ?? null);
-    if (!changed) return;
-    setHeaderSaving(true);
-    try {
-      await onUpdate(episode.id, {
-        title: trimmedTitle,
-        episode_number: editEpNum.trim() || null,
-      });
-    } finally {
-      setHeaderSaving(false);
+      setBusy(false);
     }
   };
 
@@ -165,110 +126,73 @@ export function TaskDetailsModal({
     <Modal
       open={open}
       onClose={onClose}
-      title={episode.title}
-      subtitle={episode.episode_number ?? ''}
-      maxWidth="max-w-lg"
-      hideDefaultHeader
+      title={isEdit ? (form.title ? form.title : 'Edit Task') : 'New Task'}
+      subtitle={isEdit ? (form.episode_number ? `Episode: ${form.episode_number}` : 'Update task details') :   'Create a new task in the pipeline'}
+      maxWidth="max-w-xl"
       footer={
-        canEdit ? (
-          <button onClick={() => onEdit(episode)} className="tf-btn tf-btn-primary">
-            <Pencil className="h-4 w-4" />
-            Edit Task
+        <>
+          {isEdit && canDelete && (
+            <button onClick={handleDelete} disabled={busy} className="tf-btn tf-btn-ghost text-red-500 mr-auto">
+              <Trash2 className="h-4 w-4" />
+              Delete
+            </button>
+          )}
+          <button onClick={onClose} className="tf-btn tf-btn-outline">Cancel</button>
+          <button onClick={handleSave} disabled={busy} className="tf-btn tf-btn-primary disabled:opacity-60">
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            {isEdit ? 'Save changes' : 'Create task'}
           </button>
-        ) : undefined
+        </>
       }
     >
-      {/* Editable header */}
-      <div className="flex items-start justify-between px-5 pt-5 pb-4 border-b tf-border -mx-6 -mt-6 mb-4">
-        <div className="min-w-0 flex-1 pr-3">
-          {canEdit ? (
-            <>
-              <input
-                value={editTitle}
-                onChange={(e) => setEditTitle(e.target.value)}
-                onBlur={saveHeader}
-                onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
-                placeholder="Episode title"
-                className="tf-input w-full !py-1 !px-2 -ml-2 text-base font-semibold tf-text !bg-transparent !rounded-md mb-1"
-              />
-              <div className="flex items-center gap-2 -ml-2">
-                <input
-                  value={editEpNum}
-                  onChange={(e) => setEditEpNum(e.target.value)}
-                  onBlur={saveHeader}
-                  onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
-                  placeholder="Episode number (e.g. EP 5)"
-                  className="tf-input !py-0.5 !px-2 w-48 text-xs tf-muted !bg-transparent !rounded-md"
-                />
-                {headerSaving && <span className="text-[10px] tf-muted animate-pulse">saving...</span>}
-              </div>
-            </>
-          ) : (
-            <>
-              <h2 className="text-base font-semibold tf-text">{episode.title}</h2>
-              {episode.episode_number && <p className="text-xs tf-muted mt-0.5">{episode.episode_number}</p>}
-            </>
-          )}
-        </div>
-        <button onClick={onClose} className="tf-btn tf-btn-ghost p-2 -mr-2 shrink-0">
-          <X className="h-4 w-4" />
-        </button>
-      </div>
-
       <div className="space-y-4">
-        {/* Badges */}
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge color={statusInfo.color}>{statusInfo.label}</Badge>
-          {client && <Badge color={client.primary_hex ?? undefined}>{client.name}</Badge>}
-        </div>
+        {error && <div className="text-xs text-red-500 bg-red-500/10 rounded-md px-3 py-2">{error}</div>}
 
-        {/* Status dropdown */}
         <div>
-          <label className="flex items-center gap-1.5 text-xs font-medium tf-muted mb-1.5">
-            <Clapperboard className="h-3.5 w-3.5" />
-            Workflow Status {saving && <span className="text-[10px]">saving...</span>}
-          </label>
-          <select
-            value={status}
-            onChange={(e) => handleStatusChange(e.target.value as EpisodeStatus)}
-            disabled={!canEdit}
-            className="tf-input w-full disabled:opacity-70"
-          >
-            {WORKFLOW_STATUSES.map((s, i) => (
-              <option key={s.key} value={s.key}>{i + 1}. {s.label}</option>
-            ))}
-          </select>
+          <label className="block text-xs font-medium tf-muted mb-1.5">Title</label>
+          <input value={form.title} onChange={(e) => set('title', e.target.value)} placeholder="Episode title — Guest Name" className="tf-input w-full" />
         </div>
 
-        {/* Deliverable type & sub-type */}
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="flex items-center gap-1.5 text-xs font-medium tf-muted mb-1.5">
-              <Package className="h-3.5 w-3.5" />
-              Deliverable Type {deliverableSaving && <span className="text-[10px]">saving...</span>}
-            </label>
-            <select
-              value={deliverableType}
-              onChange={(e) => handleDeliverableTypeChange(e.target.value)}
-              disabled={!canEdit}
-              className="tf-input w-full disabled:opacity-70"
-            >
+            <label className="block text-xs font-medium tf-muted mb-1.5">Episode #</label>
+            <input value={form.episode_number} onChange={(e) => set('episode_number', e.target.value)} placeholder="EP 042" className="tf-input w-full" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium tf-muted mb-1.5">Start Date</label>
+            <input type="date" value={form.start_date} onChange={(e) => set('start_date', e.target.value)} className="tf-input w-full" />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-medium tf-muted mb-1.5">Client</label>
+            <select value={form.client_id} onChange={(e) => set('client_id', e.target.value)} className="tf-input w-full">
+              <option value="">— No client —</option>
+              {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium tf-muted mb-1.5">Status</label>
+            <select value={form.status} onChange={(e) => set('status', e.target.value as EpisodeStatus)} className="tf-input w-full">
+              {WORKFLOW_STATUSES.map((s, i) => <option key={s.key} value={s.key}>{i + 1}. {s.label}</option>)}
+            </select>
+          </div>
+        </div>
+
+        {/* Dual assignees */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-medium tf-muted mb-1.5">Deliverable Type</label>
+            <select value={form.deliverable_type} onChange={(e) => { set('deliverable_type', e.target.value); set('deliverable_subtype', ''); }} className="tf-input w-full">
               <option value="">— None —</option>
               {deliverableTypes.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
-          {deliverableType === 'Branding' && (
+          {form.deliverable_type === 'Branding' && (
             <div>
-              <label className="flex items-center gap-1.5 text-xs font-medium tf-muted mb-1.5">
-                <Package className="h-3.5 w-3.5" />
-                Branding Sub-Type
-              </label>
-              <select
-                value={deliverableSubtype}
-                onChange={(e) => handleDeliverableSubtypeChange(e.target.value)}
-                disabled={!canEdit}
-                className="tf-input w-full disabled:opacity-70"
-              >
+              <label className="block text-xs font-medium tf-muted mb-1.5">Branding Sub-Type</label>
+              <select value={form.deliverable_subtype} onChange={(e) => set('deliverable_subtype', e.target.value)} className="tf-input w-full">
                 <option value="">— None —</option>
                 {brandingSubtypes.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
@@ -276,78 +200,48 @@ export function TaskDetailsModal({
           )}
         </div>
 
-        {/* Editable Assignees Dropdowns */}
+        {/* Dual assignees */}
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="flex items-center gap-1.5 text-xs font-medium tf-muted mb-1.5">
-              <User className="h-3.5 w-3.5" /> Writer Assigned {assigneeSaving && <span className="text-[10px]">saving...</span>}
-            </label>
-            <select
-              value={writerAssigneeId}
-              onChange={(e) => handleWriterAssigneeChange(e.target.value)}
-              disabled={!canEdit}
-              className="tf-input w-full disabled:opacity-70"
-            >
+            <label className="block text-xs font-medium tf-muted mb-1.5">Writer Assigned</label>
+            <select value={form.writer_assignee_id} onChange={(e) => set('writer_assignee_id', e.target.value)} className="tf-input w-full">
               <option value="">— Unassigned —</option>
-              {writerOptions.map((m) => (
-                <option key={m.id} value={m.id}>{m.name}</option>
-              ))}
+              {writerOptions.map((m) => <option key={m.id} value={m.id}>{m.name} ({m.role})</option>)}
             </select>
           </div>
-
           <div>
-            <label className="flex items-center gap-1.5 text-xs font-medium tf-muted mb-1.5">
-              <User className="h-3.5 w-3.5" /> Video Editor Assigned {assigneeSaving && <span className="text-[10px]">saving...</span>}
-            </label>
-            <select
-              value={editorAssigneeId}
-              onChange={(e) => handleEditorAssigneeChange(e.target.value)}
-              disabled={!canEdit}
-              className="tf-input w-full disabled:opacity-70"
-            >
+            <label className="block text-xs font-medium tf-muted mb-1.5">Video Editor Assigned</label>
+            <select value={form.editor_assignee_id} onChange={(e) => set('editor_assignee_id', e.target.value)} className="tf-input w-full">
               <option value="">— Unassigned —</option>
-              {editorOptions.map((m) => (
-                <option key={m.id} value={m.id}>{m.name}</option>
-              ))}
+              {editorOptions.map((m) => <option key={m.id} value={m.id}>{m.name} ({m.role})</option>)}
             </select>
           </div>
         </div>
 
-        {/* Start date */}
-        {episode.start_date && (
-          <div className="rounded-lg border tf-border p-3">
-            <div className="flex items-center gap-1.5 text-[10px] tf-muted mb-1">
-              <Calendar className="h-3 w-3" /> Start Date
-            </div>
-            <div className="text-xs tf-text">
-              {new Date(episode.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-            </div>
-          </div>
-        )}
-
-        {/* Links */}
         <div className="border-t tf-border pt-4">
           <h3 className="text-xs font-semibold tf-muted uppercase tracking-wide mb-3">Production Links</h3>
-          <div className="space-y-2">
-            <LinkRow icon={LinkIcon} label="Google Drive Raw" value={episode.google_drive_raw_link} />
-            <LinkRow icon={FolderTree} label="NAS File Path" value={episode.nas_file_path} />
-            <LinkRow icon={Clapperboard} label="Descript Project" value={episode.descript_project_link} />
-            <LinkRow icon={Film} label="Frame.io Review" value={episode.frame_io_review_link} />
-            <LinkRow icon={FileText} label="Writer Notes Doc" value={episode.writer_notes_doc} />
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-medium tf-muted mb-1">Google Drive Raw Link</label>
+              <input value={form.google_drive_raw_link} onChange={(e) => set('google_drive_raw_link', e.target.value)} placeholder="https://drive.google.com/..." className="tf-input w-full" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium tf-muted mb-1">NAS File Path</label>
+              <input value={form.nas_file_path} onChange={(e) => set('nas_file_path', e.target.value)} placeholder="/NAS/PodcastStudio/..." className="tf-input w-full font-mono text-xs" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium tf-muted mb-1">Descript Project Link</label>
+              <input value={form.descript_project_link} onChange={(e) => set('descript_project_link', e.target.value)} placeholder="https://app.descript.com/..." className="tf-input w-full" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium tf-muted mb-1">Frame.io Review Link</label>
+              <input value={form.frame_io_review_link} onChange={(e) => set('frame_io_review_link', e.target.value)} placeholder="https://frame.io/..." className="tf-input w-full" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium tf-muted mb-1">Writer Notes Doc</label>
+              <input value={form.writer_notes_doc} onChange={(e) => set('writer_notes_doc', e.target.value)} placeholder="https://docs.google.com/..." className="tf-input w-full" />
+            </div>
           </div>
-        </div>
-
-        {/* Comments */}
-        <div className="border-t tf-border pt-4">
-          <CommentsSection
-            episodeId={episode.id}
-            comments={comments}
-            teamMembers={teamMembers}
-            currentMemberId={currentMemberId}
-            canComment={true}
-            onAddComment={onAddComment}
-            onMention={onMention}
-          />
         </div>
       </div>
     </Modal>
