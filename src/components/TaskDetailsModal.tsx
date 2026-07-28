@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Episode, Client, TeamMember, Comment, EpisodeStatus, WORKFLOW_STATUSES, STATUS_MAP } from '@/lib/types';
-import { ExternalLink, Copy, Check, FolderTree, Link as LinkIcon, Clapperboard, Film, FileText, Calendar, User, Pencil, Package, Save, X } from 'lucide-react';
+import { ExternalLink, Copy, Check, FolderTree, Link as LinkIcon, Clapperboard, Film, FileText, Calendar, User, Pencil, Package, X } from 'lucide-react';
 import { Badge, Avatar } from '@/components/ui/Avatar';
 import { CommentsSection } from '@/components/CommentsSection';
 
@@ -60,6 +60,8 @@ export function TaskDetailsModal({
   const [deliverableType, setDeliverableType] = useState<string>('');
   const [deliverableSubtype, setDeliverableSubtype] = useState<string>('');
   const [deliverableSaving, setDeliverableSaving] = useState(false);
+  
+  // Editable Header State
   const [editTitle, setEditTitle] = useState('');
   const [editEpNum, setEditEpNum] = useState('');
   const [headerSaving, setHeaderSaving] = useState(false);
@@ -115,6 +117,7 @@ export function TaskDetailsModal({
     }
   };
 
+  // Save changes to Title & Episode Number on blur or Enter key
   const saveHeader = async () => {
     if (!episode) return;
     const trimmedTitle = editTitle.trim();
@@ -144,36 +147,42 @@ export function TaskDetailsModal({
         canEdit ? (
           <button onClick={() => onEdit(episode)} className="tf-btn tf-btn-primary">
             <Pencil className="h-4 w-4" />
-            Edit Task
+            Edit Full Task
           </button>
         ) : undefined
       }
     >
-      {/* Editable header */}
+      {/* Dynamic Editable Header */}
       <div className="flex items-start justify-between px-5 pt-5 pb-4 border-b tf-border -mx-6 -mt-6 mb-4">
         <div className="min-w-0 flex-1 pr-3">
           {canEdit ? (
-            <>
-              <input
-                value={editTitle}
-                onChange={(e) => setEditTitle(e.target.value)}
-                onBlur={saveHeader}
-                onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
-                placeholder="Episode title"
-                className="tf-input w-full !py-1 !px-2 -ml-2 text-base font-semibold tf-text !bg-transparent !rounded-md mb-1"
-              />
-              <div className="flex items-center gap-2 -ml-2">
+            <div className="space-y-1">
+              <div>
+                <label className="block text-[10px] font-medium tf-muted mb-0.5">Title</label>
                 <input
-                  value={editEpNum}
-                  onChange={(e) => setEditEpNum(e.target.value)}
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
                   onBlur={saveHeader}
                   onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
-                  placeholder="Episode number (e.g. EP 5)"
-                  className="tf-input !py-0.5 !px-2 w-48 text-xs tf-muted !bg-transparent !rounded-md"
+                  placeholder="Episode title"
+                  className="tf-input w-full text-base font-semibold tf-text !bg-slate-900/80 !border-slate-700/80 rounded-md py-1 px-2.5"
                 />
-                {headerSaving && <span className="text-[10px] tf-muted animate-pulse">saving...</span>}
               </div>
-            </>
+              <div className="flex items-center gap-2">
+                <div className="flex-1">
+                  <label className="block text-[10px] font-medium tf-muted mb-0.5">Episode Number</label>
+                  <input
+                    value={editEpNum}
+                    onChange={(e) => setEditEpNum(e.target.value)}
+                    onBlur={saveHeader}
+                    onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+                    placeholder="e.g. EP 5"
+                    className="tf-input w-full text-xs tf-muted !bg-slate-900/80 !border-slate-700/80 rounded-md py-0.5 px-2.5"
+                  />
+                </div>
+                {headerSaving && <span className="text-[10px] tf-muted animate-pulse mt-3">saving...</span>}
+              </div>
+            </div>
           ) : (
             <>
               <h2 className="text-base font-semibold tf-text">{episode.title}</h2>
@@ -185,6 +194,7 @@ export function TaskDetailsModal({
           <X className="h-4 w-4" />
         </button>
       </div>
+
       <div className="space-y-4">
         {/* Badges */}
         <div className="flex flex-wrap items-center gap-2">
