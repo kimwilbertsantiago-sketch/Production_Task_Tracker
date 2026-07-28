@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
-import { DEMO_USERS, DemoUser, UserRole, ROLES, isDemoEmail } from '@/lib/types';
+import { UserProfile, UserRole, ROLES } from '@/lib/types';
 
 const VALID_ROLES = new Set<string>(ROLES);
 const STALE_ROLE_VALUES = ['CSR', 'csr', 'Editor'];
@@ -31,35 +31,13 @@ function clearStaleStorage() {
   }
 }
 
-interface AuthContextValue {
-  session: Session | null;
-  user: User | null;
-  profile: DemoUser | null;
-  isDemoUser: boolean;
-  loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
-  signUp: (email: string, password: string, name: string, role: UserRole) => Promise<{ error: string | null }>;
-  signOut: () => Promise<void>;
-  quickLogin: (demoUser: DemoUser) => Promise<{ error: string | null }>;
-  updateProfile: (patch: { name?: string; role?: UserRole; avatarUrl?: string | null }) => Promise<{ error: string | null }>;
-}
-
-const AuthContext = createContext<AuthContextValue | undefined>(undefined);
-
-function matchDemoUser(email: string): DemoUser | null {
-  return DEMO_USERS.find((u) => u.email.toLowerCase() === email.toLowerCase()) ?? null;
-}
-
-function deriveProfileFromMeta(user: User | null): DemoUser | null {
+function deriveProfileFromMeta(user: User | null): UserProfile | null {
   if (!user) return null;
-  const demo = matchDemoUser(user.email ?? '');
-  if (demo) return demo;
   const meta = user.user_metadata ?? {};
   const name = (meta.name as string) || (user.email?.split('@')[0] ?? 'User');
   const role = isStaleRole(meta.role) ? 'Operations Manager' : (meta.role as UserRole);
   return {
     email: user.email ?? '',
-    password: '',
     name,
     role,
     defaultView: (meta.defaultView as string) ?? 'kanban',
@@ -68,11 +46,23 @@ function deriveProfileFromMeta(user: User | null): DemoUser | null {
   };
 }
 
+interface AuthContextValue {
+  session: Session | null;
+  user: User | null;
+  profile: UserProfile | null;
+  loading: boolean;
+  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
+  signUp: (email: string, password: string, name: string, role: UserRole) => Promise<{ error: string | null }>;
+  signOut: () => Promise<void>;
+  updateProfile: (patch: { name?: string; role?: UserRole; avatarUrl?: string | null }) => Promise<{ error: string | null }>;
+}
+
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<DemoUser | null>(null);
-  const [isDemoUser, setIsDemoUser] = useState(false);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -81,7 +71,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(data.session);
       setUser(data.session?.user ?? null);
       setProfile(deriveProfileFromMeta(data.session?.user ?? null));
-      setIsDemoUser(isDemoEmail(data.session?.user?.email));
       setLoading(false);
     }).catch(() => {
       clearStaleStorage();
@@ -89,12 +78,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      (async () => {
-        setSession(newSession);
-        setUser(newSession?.user ?? null);
-        setProfile(deriveProfileFromMeta(newSession?.user ?? null));
-        setIsDemoUser(isDemoEmail(newSession?.user?.email));
-      })();
+      setSession(newSession);
+      setUser(newSession?.user ?? null);
+      setProfile(deriveProfileFromMeta(newSession?.user ?? null));
     });
 
     return () => sub.subscription.unsubscribe();
@@ -112,40 +98,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       options: { data: { name, role, defaultView: 'kanban', avatarColor: '#64748B' } },
     });
     if (error) return { error: error.message };
-    // If signup succeeded and returned a session, the user is logged in.
-    // The role is now stored in user_metadata and will be read by deriveProfileFromMeta.
     if (data.user) {
       setSession(data.session);
       setUser(data.user);
       setProfile(deriveProfileFromMeta(data.user));
-      setIsDemoUser(isDemoEmail(data.user.email));
-    }
-    return { error: null };
-  };
-
-  const quickLogin = async (demoUser: DemoUser) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email: demoUser.email,
-      password: demoUser.password,
-    });
-    if (error) {
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email: demoUser.email,
-        password: demoUser.password,
-        options: { data: { name: demoUser.name, role: demoUser.role, defaultView: demoUser.defaultView, avatarColor: demoUser.avatarColor } },
-      });
-      if (signUpError) return { error: signUpError.message };
-      if (data.user) {
-        setSession(data.session);
-        setUser(data.user);
-        setProfile(deriveProfileFromMeta(data.user));
-        setIsDemoUser(isDemoEmail(data.user.email));
-      }
-      const { error: retryError } = await supabase.auth.signInWithPassword({
-        email: demoUser.email,
-        password: demoUser.password,
-      });
-      return { error: retryError?.message ?? null };
     }
     return { error: null };
   };
@@ -165,7 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (patch.avatarUrl !== undefined) profileUpdate.avatar_url = patch.avatarUrl;
       const { error: profileError } = await supabase.from('profiles').update(profileUpdate).eq('id', user.id);
       if (profileError) return { error: profileError.message };
-      if (patch.name !== undefined || patch.avatarUrl !== undefined) {
+      if (patch.name !== undefined || patch.avatarUrl !== undefined || patch.role !== undefined) {
         const tmUpdate: Record<string, string | null> = {};
         if (patch.name !== undefined) tmUpdate.name = patch.name;
         if (patch.avatarUrl !== undefined) tmUpdate.avatar_url = patch.avatarUrl;
@@ -187,12 +143,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     await supabase.auth.signOut();
     setProfile(null);
-    setIsDemoUser(false);
   };
 
   return (
     <AuthContext.Provider
-      value={{ session, user, profile, isDemoUser, loading, signIn, signUp, signOut, quickLogin, updateProfile }}
+      value={{ session, user, profile, loading, signIn, signUp, signOut, updateProfile }}
     >
       {children}
     </AuthContext.Provider>

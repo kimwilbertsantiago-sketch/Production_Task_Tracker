@@ -1,11 +1,10 @@
 import { useState } from 'react';
 import { Loader2, Lock, Mail, User as UserIcon, ArrowRight, Briefcase } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { DEMO_USERS, DemoUser, ROLES, UserRole, ROLE_COLORS } from '@/lib/types';
-import { Avatar } from '@/components/ui/Avatar';
+import { ROLES, UserRole, ROLE_COLORS } from '@/lib/types';
 
 export function AuthScreen() {
-  const { signIn, signUp, quickLogin } = useAuth();
+  const { signIn, signUp } = useAuth();
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -13,7 +12,6 @@ export function AuthScreen() {
   const [role, setRole] = useState<UserRole>('Operations Manager');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [busyDemo, setBusyDemo] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,14 +22,6 @@ export function AuthScreen() {
         ? await signIn(email, password)
         : await signUp(email, password, name, role);
     setBusy(false);
-    if (error) setError(error);
-  };
-
-  const handleQuickLogin = async (demo: DemoUser) => {
-    setError(null);
-    setBusyDemo(demo.email);
-    const { error } = await quickLogin(demo);
-    setBusyDemo(null);
     if (error) setError(error);
   };
 
@@ -88,7 +78,7 @@ export function AuthScreen() {
             {mode === 'signin' ? 'Sign in to your workspace' : 'Create your account'}
           </h3>
           <p className="text-sm tf-muted mb-5">
-            {mode === 'signin' ? 'Welcome back. Pick a role below to explore.' : 'Join the studio workspace — pick your role.'}
+            {mode === 'signin' ? 'Welcome back. Enter your credentials to continue.' : 'Join the studio workspace — pick your role.'}
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-3">
@@ -172,30 +162,6 @@ export function AuthScreen() {
               {mode === 'signin' ? 'Sign in' : 'Create account'}
             </button>
           </form>
-
-          <div className="flex items-center gap-3 my-5">
-            <div className="h-px flex-1" style={{ backgroundColor: 'var(--border)' }} />
-            <span className="text-xs tf-muted">Quick login as role</span>
-            <div className="h-px flex-1" style={{ backgroundColor: 'var(--border)' }} />
-          </div>
-
-          <div className="grid grid-cols-3 gap-2">
-            {DEMO_USERS.map((demo) => (
-              <button
-                key={demo.email}
-                onClick={() => handleQuickLogin(demo)}
-                disabled={busyDemo !== null}
-                className="flex flex-col items-center gap-2 rounded-lg border tf-border px-2 py-3 text-center hover:bg-[var(--bg-subtle)] transition-colors disabled:opacity-60"
-              >
-                <Avatar name={demo.name} color={demo.avatarColor} size="sm" />
-                <div className="min-w-0">
-                  <div className="text-[11px] font-medium tf-text truncate">{demo.name.split(' ')[0]}</div>
-                  <div className="text-[10px] tf-muted truncate leading-tight">{demo.role === 'Operations Manager' ? 'Ops Mgr' : demo.role}</div>
-                </div>
-                {busyDemo === demo.email && <Loader2 className="h-3.5 w-3.5 animate-spin tf-muted" />}
-              </button>
-            ))}
-          </div>
 
           <p className="text-xs tf-muted text-center mt-5">
             {mode === 'signin' ? "Don't have an account? " : 'Already have an account? '}

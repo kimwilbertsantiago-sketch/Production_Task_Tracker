@@ -67,8 +67,8 @@ export function TaskModal({ open, onClose, episode, clients, teamMembers, listId
 
   const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
-  const writerOptions = teamMembers.filter((m) => m.role === 'Writer' || m.role === 'Operations Manager');
-  const editorOptions = teamMembers.filter((m) => m.role === 'Video Editor' || m.role === 'Operations Manager');
+  const writerOptions = teamMembers.filter((m) => m.role === 'Writer');
+  const editorOptions = teamMembers.filter((m) => m.role === 'Video Editor');
 
   const handleSave = async () => {
     if (!form.title.trim()) {

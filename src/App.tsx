@@ -21,7 +21,7 @@ import { Episode, Client, EpisodeStatus, TeamMember, NotificationType, Notificat
 import { Loader2, AlertCircle } from 'lucide-react';
 
 function Workspace() {
-  const { profile, user, isDemoUser } = useAuth();
+  const { profile, user } = useAuth();
   const { showToast } = useToast();
   const canEdit = true;
   const canDelete = canDeleteTasks(profile?.role);
@@ -39,13 +39,13 @@ function Workspace() {
 
   const {
     lists, clients, episodes, bookings, teamMembers, comments, notifications,
-    loading, error, usingFallback,
+    loading, error,
     updateEpisode, updateEpisodeStatus, createEpisode, deleteEpisode,
     createClient, updateClient, deleteClient,
     customOptions, createCustomOption, deleteCustomOption,
     purgeAllTasksAndClients, resetEverything,
     addComment, markNotificationRead, markAllNotificationsRead, createNotification,
-  } = useWorkspaceData(currentUserId, isDemoUser);
+  } = useWorkspaceData(currentUserId);
 
   const deliverableTypes = useMemo(() => {
     return [...DEFAULT_DELIVERABLE_TYPES, ...customOptions.filter((o) => o.category === 'deliverable_type').map((o) => o.label)];
@@ -243,13 +243,6 @@ function Workspace() {
         onEditProfile={() => setProfileModalOpen(true)}
         onStudioSettings={() => setSettingsModalOpen(true)}
       />
-      {usingFallback && isDemoUser && (
-        <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2 text-center">
-          <span className="text-[11px] text-amber-600 dark:text-amber-400">
-            Demo mode — showing sample workspace data. Changes won't be saved.
-          </span>
-        </div>
-      )}
       <main className="flex-1 overflow-hidden">
         <div className={`mx-auto w-full h-full ${view === 'kanban' ? 'max-w-[100vw] px-0 sm:px-0 lg:px-0' : view === 'table' ? 'max-w-[90rem] px-4 sm:px-6 lg:px-8' : 'max-w-7xl px-4 sm:px-6 lg:px-8'}`}>
           {view === 'kanban' && (

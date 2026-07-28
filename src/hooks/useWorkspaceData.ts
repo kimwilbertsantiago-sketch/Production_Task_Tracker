@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Episode, Client, Booking, ListRow, EpisodeStatus, TeamMember, Comment, Notification, NotificationType, CustomOption, isDemoEmail } from '@/lib/types';
-import { FALLBACK_DATA } from '@/lib/fallbackData';
+import { Episode, Client, Booking, ListRow, EpisodeStatus, TeamMember, Comment, Notification, NotificationType, CustomOption } from '@/lib/types';
 
 interface WorkspaceData {
   lists: ListRow[];
@@ -35,7 +34,7 @@ interface WorkspaceData {
   createNotification: (payload: { userId: string; episodeId?: string | null; type: NotificationType; message: string; actorName?: string | null }) => Promise<void>;
 }
 
-export function useWorkspaceData(currentUserId?: string, isDemoUser?: boolean): WorkspaceData {
+export function useWorkspaceData(currentUserId?: string): WorkspaceData {
   const [lists, setLists] = useState<ListRow[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [episodes, setEpisodes] = useState<Episode[]>([]);
@@ -66,10 +65,8 @@ export function useWorkspaceData(currentUserId?: string, isDemoUser?: boolean): 
       if (firstError) throw firstError;
 
       const allMembers = (membersRes.data as TeamMember[]) ?? [];
-      // Real (non-demo) users: filter out demo team members so they don't pollute real workflows
-      const visibleMembers = isDemoUser
-        ? allMembers
-        : allMembers.filter((m) => !isDemoEmail(m.email));
+      // Always show all live team members from the database
+      const visibleMembers = allMembers;
 
       setLists((listsRes.data as ListRow[]) ?? []);
       setClients((clientsRes.data as Client[]) ?? []);
@@ -81,33 +78,20 @@ export function useWorkspaceData(currentUserId?: string, isDemoUser?: boolean): 
       setUsingFallback(false);
     } catch (err) {
       console.warn('[useWorkspaceData] Database fetch failed:', err);
-      // Demo users get sample data; real users get clean empty workspace
-      if (isDemoUser) {
-        setLists(FALLBACK_DATA.lists);
-        setClients(FALLBACK_DATA.clients);
-        setEpisodes(FALLBACK_DATA.episodes);
-        setBookings(FALLBACK_DATA.bookings);
-        setTeamMembers(FALLBACK_DATA.teamMembers);
-        setComments([]);
-        setNotifications([]);
-        setCustomOptions([]);
-        setUsingFallback(true);
-      } else {
-        setLists([]);
-        setClients([]);
-        setEpisodes([]);
-        setBookings([]);
-        setTeamMembers([]);
-        setComments([]);
-        setNotifications([]);
-        setCustomOptions([]);
-        setUsingFallback(false);
-      }
+      setLists([]);
+      setClients([]);
+      setEpisodes([]);
+      setBookings([]);
+      setTeamMembers([]);
+      setComments([]);
+      setNotifications([]);
+      setCustomOptions([]);
+      setUsingFallback(false);
       setError(null);
     } finally {
       setLoading(false);
     }
-  }, [isDemoUser]);
+  }, []);
 
   const fetchNotifications = useCallback(async () => {
     if (!currentUserId) return;
