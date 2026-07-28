@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Episode, Client, TeamMember, Comment, EpisodeStatus, WORKFLOW_STATUSES, STATUS_MAP } from '@/lib/types';
-import { ExternalLink, Copy, Check, FolderTree, Link as LinkIcon, Clapperboard, Film, FileText, Calendar, User, Pencil, Package, Save } from 'lucide-react';
+import { ExternalLink, Copy, Check, FolderTree, Link as LinkIcon, Clapperboard, Film, FileText, Calendar, User, Pencil, Package, Save, X } from 'lucide-react';
 import { Badge, Avatar } from '@/components/ui/Avatar';
 import { CommentsSection } from '@/components/CommentsSection';
 
@@ -136,34 +136,10 @@ export function TaskDetailsModal({
     <Modal
       open={open}
       onClose={onClose}
-      title={
-        canEdit ? (
-          <input
-            value={editTitle}
-            onChange={(e) => setEditTitle(e.target.value)}
-            onBlur={saveHeader}
-            onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
-            placeholder="Episode title"
-            className="tf-input w-full !bg-transparent !border-transparent hover:!border tf-border focus:!border tf-border px-1 -mx-1 text-sm font-semibold tf-text"
-          />
-        ) : episode.title
-      }
-      subtitle={
-        canEdit ? (
-          <div className="flex items-center gap-2">
-            <input
-              value={editEpNum}
-              onChange={(e) => setEditEpNum(e.target.value)}
-              onBlur={saveHeader}
-              onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
-              placeholder="EP #"
-              className="tf-input !bg-transparent !border-transparent hover:!border tf-border focus:!border tf-border px-1 -mx-1 w-20 text-[11px] tf-muted"
-            />
-            {headerSaving && <span className="text-[10px] tf-muted">saving...</span>}
-          </div>
-        ) : (episode.episode_number ?? '')
-      }
+      title={episode.title}
+      subtitle={episode.episode_number ?? ''}
       maxWidth="max-w-lg"
+      hideDefaultHeader
       footer={
         canEdit ? (
           <button onClick={() => onEdit(episode)} className="tf-btn tf-btn-primary">
@@ -173,6 +149,42 @@ export function TaskDetailsModal({
         ) : undefined
       }
     >
+      {/* Editable header */}
+      <div className="flex items-start justify-between px-5 pt-5 pb-4 border-b tf-border -mx-6 -mt-6 mb-4">
+        <div className="min-w-0 flex-1 pr-3">
+          {canEdit ? (
+            <>
+              <input
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                onBlur={saveHeader}
+                onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+                placeholder="Episode title"
+                className="tf-input w-full !py-1 !px-2 -ml-2 text-base font-semibold tf-text !bg-transparent !rounded-md mb-1"
+              />
+              <div className="flex items-center gap-2 -ml-2">
+                <input
+                  value={editEpNum}
+                  onChange={(e) => setEditEpNum(e.target.value)}
+                  onBlur={saveHeader}
+                  onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+                  placeholder="Episode number (e.g. EP 5)"
+                  className="tf-input !py-0.5 !px-2 w-48 text-xs tf-muted !bg-transparent !rounded-md"
+                />
+                {headerSaving && <span className="text-[10px] tf-muted animate-pulse">saving...</span>}
+              </div>
+            </>
+          ) : (
+            <>
+              <h2 className="text-base font-semibold tf-text">{episode.title}</h2>
+              {episode.episode_number && <p className="text-xs tf-muted mt-0.5">{episode.episode_number}</p>}
+            </>
+          )}
+        </div>
+        <button onClick={onClose} className="tf-btn tf-btn-ghost p-2 -mr-2 shrink-0">
+          <X className="h-4 w-4" />
+        </button>
+      </div>
       <div className="space-y-4">
         {/* Badges */}
         <div className="flex flex-wrap items-center gap-2">
