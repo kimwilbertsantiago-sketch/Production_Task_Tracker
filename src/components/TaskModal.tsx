@@ -126,8 +126,8 @@ export function TaskModal({ open, onClose, episode, clients, teamMembers, listId
     <Modal
       open={open}
       onClose={onClose}
-      title={isEdit ? 'Edit Task' : 'New Task'}
-      subtitle={isEdit ? 'Update episode details and assignees' : 'Create a new episode task in the pipeline'}
+      title={isEdit ? (form.title ? form.title : 'Edit Task') : 'New Task'}
+      subtitle={isEdit ? (form.episode_number ? `Episode: ${form.episode_number}` : 'Update task details') :   'Create a new task in the pipeline'}
       maxWidth="max-w-xl"
       footer={
         <>
