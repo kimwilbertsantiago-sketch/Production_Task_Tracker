@@ -4,8 +4,8 @@ import { X } from 'lucide-react';
 interface ModalProps {
   open: boolean;
   onClose: () => void;
-  title: string;
-  subtitle?: string;
+  title: ReactNode;
+  subtitle?: ReactNode;
   children: ReactNode;
   footer?: ReactNode;
   maxWidth?: string;

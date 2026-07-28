@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Client, BrandColor } from '@/lib/types';
-import { Loader2, Plus, Trash2, X } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { Loader2, Plus, Trash2, X, Upload, FileText } from 'lucide-react';
 
 interface BrandModalProps {
   open: boolean;
@@ -21,7 +22,8 @@ const DEFAULT_COLORS: BrandColor[] = [
 
 const emptyForm = {
   name: '',
-  logo_url: '',
+  logo_url: '' as string | null,
+  brand_book_url: '' as string | null,
   colors: DEFAULT_COLORS as BrandColor[],
   header_font: '',
   subtitle_font: '',
@@ -30,17 +32,31 @@ const emptyForm = {
   notes: '',
 };
 
+async function uploadFile(file: File, folder: string): Promise<string | null> {
+  const ext = file.name.split('.').pop() ?? '';
+  const fileName = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  const { error } = await supabase.storage.from('brand-assets').upload(fileName, file, { upsert: true });
+  if (error) return null;
+  const { data } = supabase.storage.from('brand-assets').getPublicUrl(fileName);
+  return data.publicUrl;
+}
+
 export function BrandModal({ open, onClose, client, workspaceId, onCreate, onUpdate }: BrandModalProps) {
   const isEdit = !!client;
   const [form, setForm] = useState({ ...emptyForm });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [pdfUploading, setPdfUploading] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const pdfInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (client) {
       setForm({
         name: client.name,
         logo_url: client.logo_url ?? '',
+        brand_book_url: client.brand_book_url ?? '',
         colors: client.colors ?? DEFAULT_COLORS,
         header_font: client.header_font ?? '',
         subtitle_font: client.subtitle_font ?? '',
@@ -54,7 +70,45 @@ export function BrandModal({ open, onClose, client, workspaceId, onCreate, onUpd
     setError(null);
   }, [client, open]);
 
-  const set = (k: keyof typeof form, v: string | BrandColor[] | string[]) => setForm((f) => ({ ...f, [k]: v }));
+  const set = (k: keyof typeof form, v: string | BrandColor[] | string[] | null) => setForm((f) => ({ ...f, [k]: v }));
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setLogoUploading(true);
+    try {
+      const url = await uploadFile(file, 'logos');
+      if (url) {
+        set('logo_url', url);
+      } else {
+        setError('Failed to upload logo. Please try again.');
+      }
+    } finally {
+      setLogoUploading(false);
+      if (logoInputRef.current) logoInputRef.current.value = '';
+    }
+  };
+
+  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.type !== 'application/pdf') {
+      setError('Please select a PDF file.');
+      return;
+    }
+    setPdfUploading(true);
+    try {
+      const url = await uploadFile(file, 'brand-books');
+      if (url) {
+        set('brand_book_url', url);
+      } else {
+        setError('Failed to upload brand book. Please try again.');
+      }
+    } finally {
+      setPdfUploading(false);
+      if (pdfInputRef.current) pdfInputRef.current.value = '';
+    }
+  };
 
   const updateColor = (i: number, field: keyof BrandColor, value: string) => {
     setForm((f) => {
@@ -88,6 +142,7 @@ export function BrandModal({ open, onClose, client, workspaceId, onCreate, onUpd
       const payload: Partial<Client> = {
         name: form.name.trim(),
         logo_url: form.logo_url || null,
+        brand_book_url: form.brand_book_url || null,
         colors: form.colors,
         header_font: form.header_font || null,
         subtitle_font: form.subtitle_font || null,
@@ -135,15 +190,63 @@ export function BrandModal({ open, onClose, client, workspaceId, onCreate, onUpd
           <input value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="e.g. The Growth Pod" className="tf-input w-full" />
         </div>
 
+        {/* Logo upload */}
         <div>
-          <label className="block text-xs font-medium tf-muted mb-1.5">Logo URL</label>
-          <input value={form.logo_url} onChange={(e) => set('logo_url', e.target.value)} placeholder="https://... (link to client logo image)" className="tf-input w-full" />
-          {form.logo_url && (
-            <div className="mt-2 flex items-center gap-2 p-2 rounded-lg border tf-border tf-bg-subtle">
-              <img src={form.logo_url} alt="Logo preview" className="h-10 w-10 rounded object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-              <span className="text-[11px] tf-muted">Logo preview</span>
-            </div>
-          )}
+          <label className="block text-xs font-medium tf-muted mb-1.5">Client Logo</label>
+          <input ref={logoInputRef} type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
+          <div className="flex items-center gap-3">
+            {form.logo_url && (
+              <div className="h-14 w-14 rounded-lg border tf-border tf-bg-subtle flex items-center justify-center overflow-hidden shrink-0">
+                <img src={form.logo_url} alt="Logo preview" className="h-full w-full object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => logoInputRef.current?.click()}
+              disabled={logoUploading}
+              className="tf-btn tf-btn-outline text-xs"
+            >
+              {logoUploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+              {form.logo_url ? 'Replace logo' : 'Upload logo'}
+            </button>
+            {form.logo_url && (
+              <button type="button" onClick={() => set('logo_url', null)} className="tf-btn tf-btn-ghost text-xs text-red-500">
+                <Trash2 className="h-3.5 w-3.5" />
+                Remove
+              </button>
+            )}
+          </div>
+          <p className="text-[10px] tf-muted mt-1.5">Upload an image file (PNG, JPG, SVG). It will be stored and displayed on the brand card.</p>
+        </div>
+
+        {/* Brand book PDF upload */}
+        <div>
+          <label className="block text-xs font-medium tf-muted mb-1.5">Brand Book (PDF)</label>
+          <input ref={pdfInputRef} type="file" accept="application/pdf" onChange={handlePdfUpload} className="hidden" />
+          <div className="flex items-center gap-3">
+            {form.brand_book_url && (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg border tf-border tf-bg-subtle">
+                <FileText className="h-4 w-4 text-red-500" />
+                <span className="text-[11px] tf-text truncate max-w-[160px]">Brand book uploaded</span>
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => pdfInputRef.current?.click()}
+              disabled={pdfUploading}
+              className="tf-btn tf-btn-outline text-xs"
+            >
+              {pdfUploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+              {form.brand_book_url ? 'Replace PDF' : 'Upload PDF'}
+            </button>
+            {form.brand_book_url && (
+              <button type="button" onClick={() => set('brand_book_url', null)} className="tf-btn tf-btn-ghost text-xs text-red-500">
+                <Trash2 className="h-3.5 w-3.5" />
+                Remove
+              </button>
+            )}
+          </div>
+          <p className="text-[10px] tf-muted mt-1.5">Upload a PDF brand book or style guide. Users can view it directly from the brand card.</p>
         </div>
 
         {/* Colors */}

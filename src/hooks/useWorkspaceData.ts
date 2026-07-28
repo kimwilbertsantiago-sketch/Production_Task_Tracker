@@ -227,6 +227,7 @@ export function useWorkspaceData(currentUserId?: string): WorkspaceData {
         font_requirements: null,
         lower_third_template: null,
         logo_url: payload.logo_url ?? null,
+        brand_book_url: payload.brand_book_url ?? null,
         notes: payload.notes ?? null,
         colors: payload.colors ?? [],
         header_font: payload.header_font ?? null,

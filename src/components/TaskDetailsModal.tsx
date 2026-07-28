@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Episode, Client, TeamMember, Comment, EpisodeStatus, WORKFLOW_STATUSES, STATUS_MAP } from '@/lib/types';
-import { ExternalLink, Copy, Check, FolderTree, Link as LinkIcon, Clapperboard, Film, FileText, Calendar, User, Pencil, Package } from 'lucide-react';
+import { ExternalLink, Copy, Check, FolderTree, Link as LinkIcon, Clapperboard, Film, FileText, Calendar, User, Pencil, Package, Save } from 'lucide-react';
 import { Badge, Avatar } from '@/components/ui/Avatar';
 import { CommentsSection } from '@/components/CommentsSection';
 
@@ -60,12 +60,17 @@ export function TaskDetailsModal({
   const [deliverableType, setDeliverableType] = useState<string>('');
   const [deliverableSubtype, setDeliverableSubtype] = useState<string>('');
   const [deliverableSaving, setDeliverableSaving] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editEpNum, setEditEpNum] = useState('');
+  const [headerSaving, setHeaderSaving] = useState(false);
 
   useEffect(() => {
     if (episode) {
       setStatus(episode.status);
       setDeliverableType(episode.deliverable_type ?? '');
       setDeliverableSubtype(episode.deliverable_subtype ?? '');
+      setEditTitle(episode.title);
+      setEditEpNum(episode.episode_number ?? '');
     }
   }, [episode]);
 
@@ -110,12 +115,54 @@ export function TaskDetailsModal({
     }
   };
 
+  const saveHeader = async () => {
+    if (!episode) return;
+    const trimmedTitle = editTitle.trim();
+    if (!trimmedTitle) return;
+    const changed = trimmedTitle !== episode.title || (editEpNum.trim() || null) !== (episode.episode_number ?? null);
+    if (!changed) return;
+    setHeaderSaving(true);
+    try {
+      await onUpdate(episode.id, {
+        title: trimmedTitle,
+        episode_number: editEpNum.trim() || null,
+      });
+    } finally {
+      setHeaderSaving(false);
+    }
+  };
+
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title={episode.title}
-      subtitle={episode.episode_number ?? ''}
+      title={
+        canEdit ? (
+          <input
+            value={editTitle}
+            onChange={(e) => setEditTitle(e.target.value)}
+            onBlur={saveHeader}
+            onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+            placeholder="Episode title"
+            className="tf-input w-full !bg-transparent !border-transparent hover:!border tf-border focus:!border tf-border px-1 -mx-1 text-sm font-semibold tf-text"
+          />
+        ) : episode.title
+      }
+      subtitle={
+        canEdit ? (
+          <div className="flex items-center gap-2">
+            <input
+              value={editEpNum}
+              onChange={(e) => setEditEpNum(e.target.value)}
+              onBlur={saveHeader}
+              onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+              placeholder="EP #"
+              className="tf-input !bg-transparent !border-transparent hover:!border tf-border focus:!border tf-border px-1 -mx-1 w-20 text-[11px] tf-muted"
+            />
+            {headerSaving && <span className="text-[10px] tf-muted">saving...</span>}
+          </div>
+        ) : (episode.episode_number ?? '')
+      }
       maxWidth="max-w-lg"
       footer={
         canEdit ? (

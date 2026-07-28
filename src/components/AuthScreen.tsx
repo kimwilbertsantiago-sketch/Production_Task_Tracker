@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Loader2, Lock, Mail, User as UserIcon, ArrowRight, Briefcase } from 'lucide-react';
+import { Loader2, Lock, Mail, User as UserIcon, ArrowRight, Briefcase, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { ROLES, UserRole, ROLE_COLORS } from '@/lib/types';
 
@@ -12,6 +12,7 @@ export function AuthScreen() {
   const [role, setRole] = useState<UserRole>('Operations Manager');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -117,14 +118,22 @@ export function AuthScreen() {
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 tf-muted" />
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   required
                   minLength={6}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="tf-input w-full pl-9"
+                  className="tf-input w-full pl-9 pr-10"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((s) => !s)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 tf-muted hover:tf-text transition-colors"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
               </div>
             </div>
             {mode === 'signup' && (

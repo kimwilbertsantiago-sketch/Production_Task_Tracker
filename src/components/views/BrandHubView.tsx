@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Client, Episode } from '@/lib/types';
-import { Palette, Type, FolderTree, FileText, Film, Plus, Pencil, ExternalLink, Search, X, ChevronRight, Trash2 } from 'lucide-react';
+import { Palette, Type, FolderTree, FileText, Film, Plus, Pencil, ExternalLink, Search, X, ChevronRight, Trash2, BookOpen } from 'lucide-react';
 import { Badge } from '@/components/ui/Avatar';
 
 interface BrandHubViewProps {
@@ -31,8 +31,9 @@ function SortSelect({ value, onChange }: { value: SortKey; onChange: (v: SortKey
 
 export function BrandHubView({ clients, episodes, canEdit, canDelete, onAddBrand, onEditBrand, onDeleteBrand }: BrandHubViewProps) {
   const [search, setSearch] = useState('');
-  const [sort, setSort] = useState<SortKey>('name');
   const [confirmDelete, setConfirmDelete] = useState<Client | null>(null);
+  const [pdfViewer, setPdfViewer] = useState<Client | null>(null);
+  const [sort, setSort] = useState<SortKey>('name');
 
   const hasFilters = !!search;
 
@@ -214,6 +215,16 @@ export function BrandHubView({ clients, episodes, canEdit, canDelete, onAddBrand
                   </div>
                 )}
 
+                {client.brand_book_url && (
+                  <button
+                    onClick={() => setPdfViewer(client)}
+                    className="tf-btn tf-btn-outline w-full text-xs mb-4"
+                  >
+                    <BookOpen className="h-3.5 w-3.5" />
+                    View Brand Book
+                  </button>
+                )}
+
                 {/* Recent episodes */}
                 {clientEpisodes.length > 0 && (
                   <div className="mt-auto pt-4 border-t tf-border">
@@ -264,6 +275,30 @@ export function BrandHubView({ clients, episodes, canEdit, canDelete, onAddBrand
                 <Trash2 className="h-4 w-4" />
                 Delete brand
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PDF Brand Book Viewer */}
+      {pdfViewer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => setPdfViewer(null)}>
+          <div className="tf-card border tf-border rounded-2xl max-w-4xl w-full h-[85vh] flex flex-col tf-fade-in" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-3 border-b tf-border shrink-0">
+              <div className="flex items-center gap-2">
+                <BookOpen className="h-4 w-4 tf-muted" />
+                <h3 className="text-sm font-semibold tf-text">{pdfViewer.name} — Brand Book</h3>
+              </div>
+              <button onClick={() => setPdfViewer(null)} className="tf-btn tf-btn-ghost p-1.5">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-hidden rounded-b-2xl">
+              <iframe
+                src={pdfViewer.brand_book_url ?? ''}
+                title={`${pdfViewer.name} Brand Book`}
+                className="w-full h-full border-0"
+              />
             </div>
           </div>
         </div>

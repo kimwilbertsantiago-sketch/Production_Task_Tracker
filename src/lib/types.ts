@@ -57,6 +57,7 @@ export interface Client {
   subtitle_font: string | null;
   body_font: string | null;
   nas_paths: string[] | null;
+  brand_book_url: string | null;
   created_at: string;
 }
 
